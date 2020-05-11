@@ -3,92 +3,93 @@
 # This runs a version of Wadsworth (2017) An integrative Bayesian Dirichlet-multinomial regression model for the analysis of taxonomic abundances in microbiome data
 # This is much faster than DTMbvs for special case of #taxa = #branches in the tree
 
-DMbvs_R <- function( iterations = 5000, thin = 10,  Y = NULL, X = NULL, MCMC = "Gibbs", alpha = NULL, beta = NULL, sigma2_alpha = 10, sigma2_beta = 10,
-                      aa = 0.1, bb = 1.9, seed = 1212, warmstart = FALSE ){
-  
+# Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested
+DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = NULL, phi = NULL, zeta = NULL,
+                         sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), a = 1, b = 9, warmstart = T, seed = 1 ){
   library(mvtnorm)
-  library(MCMCpack) 
+  library(DMLMbvs)
+  library(MCMCpack)
+  library(Rcpp)
+  library(ggplot2)
+  library(RcppArmadillo)
   
-  # iterations - integer number of MCMC samples, default = 50000
-  # thin - integer MCMC by # thin, default = 10
-  # Y - N x branch matrix of count data.
-  # X - N x P matrix of covariates
-  # MCMC - name of MCMC type to use. Takes values "Gibbs" (default) and "SSVS" ( faster for each iteration, may need more iterations for convergence )
-  # alpha branch x 1 vector of branch intercepts
-  # beta branch x P vector of regression coefficients
-  # sigma2_alpha - prior variance for alpha, default = 10
-  # sigma2_beta - prior variance for phi, default = 10
-  # aa - double beta-binomial hyperparameter
-  # bb - double beta-binomial hyperparameter 
-  # seed - set the seed, if you want 
-  # warmstart - boolean if true, start model using informed initial values. 
+  # iterations - Number of MCMC samples, Default = 20000
+  # thin - Then MCMC by # thin, Default = 10
+  # z - subject x part matrix of multivariate count data
+  # x - subject x covariate matrix of measures
+  # alpha - part X 1 vector of initial intercept values
+  # phi - part X covariate matrix of initial regression coefficients
+  # sigma2_alpha - prior value for alpha variance, Default = sqrt(10)
+  # sigma2_phi - prior value for phi variance, Default = sqrt(10)
+  # a -  parameter for beta prior for covariate inclusion probability, Default = 1
+  # b -  parameter for beta prior for covariate inclusion probability, Default = 9
+  # seed - set random seed for simulated data, Default = 1
   
-  # Defense
-  if( iterations%%1 != 0 | iterations <= 0){
-    stop("Bad input: iterations should be a positive integer")
-  }
-  
-  if( thin%%1 != 0 | thin < 0 ){
-    stop("Bad input: thin should be a positive integer")
-  }
-  
-  if( (MCMC != "Gibbs") + (MCMC != "SSVS")  == 2 ){
-    stop("Bad input: prior is not in correct format")
-  }
   
   # Set seed for replication
   set.seed( seed )
-
-  n_cats = ncol( Y )
-  n_vars = ncol( X )
-  n_obs = nrow( Y )
-
-  # Adjust inital values for alpha and beta if they are NULL
-  alpha. <- if( is.null( alpha ) ){  rep( 0, n_cats )  }else{ alpha }
-  beta. <- if( is.null( beta ) ){ rep(0, n_cats*n_vars ) }else{ beta }
+  
+  # Simulate data 
+  if( is.null( x ) | is.null( z ) ){
+    stop("Bad input: Data must be supplied")
+  }
+  
+  # Adjust inputs if x,z are provided
+  
+  B_sim <- ncol( z ) 
+  covariates_sim <- ncol( x ) 
+  
+  # Initiate starting values and allocate memory 
+  samples <- floor( iterations/thin )
+  
+  # Intercept term alpha_j
+  alpha. <- matrix( 0, nrow = B_sim, ncol = samples )
+  
+  # Inclusion indicators zeta_jp
+  zeta. <- array( 0, dim = c( B_sim, covariates_sim, samples ) )
+  
+  # Regression Coefficients phi_jp
+  phi. <- array( 0, dim = c( B_sim, covariates_sim, samples ) )
+  
+  # Adjust inital values for alpha, zeta, phi, psi, and xi if they are still NULL
+  alpha.[ , 1] <- if( is.null( alpha ) ){ rnorm( n = 10 )}else{ alpha }  
+  zeta.[ , , 1] <- ifelse( is.null( zeta ), 0, zeta )
+  phi.[ , , 1]  <-  if( is.null( phi )){ rnorm( n = B_sim*covariates_sim )*zeta.[,,1]}else{ phi }  
+  
+  
+  # initialize latent variables
+  cc. <- z 
+  uu <- rep( 0 , nrow( z ) ) 
+  for( n in 1:nrow( x ) ){
+    sum_Z <- sum( z[ n, ] )
+    uu[ n ] <- rgamma( 1, sum_Z, sum_Z );
+  }
   
   if( warmstart == TRUE ){
-    alpha. <-   scale( log( colSums( Y ) ) )  
-     
-      cormat = matrix(0, n_cats, n_vars)
-      pmat = matrix(0, n_cats, n_vars)
-      yy = Y/rowSums(Y) # compositionalize
-      for(rr in 1:n_cats){
-        for(cc in 1:n_vars){
-          pmat[rr, cc] = stats::cor.test(X[, cc], yy[, rr], method = "spearman",
-                                         exact = F)$p.value
-          cormat[rr, cc] = stats::cor(X[, cc], yy[, rr], method = "spearman")
-        }
-      }
-      
-      # defaults to 0.2 false discovery rate
-      pm = matrix((stats::p.adjust(c(pmat), method = "fdr") <= 0.2) + 0, n_cats,
-                  n_vars)
-      betmat = cormat * pm
-      betmat = c(t(betmat))
-      beta. = betmat 
-  }
-  
-  # Set everything else 
-  mu_al = rep( 0, n_cats)
-  sig_al = rep( sigma2_alpha, n_cats)
-  mu_be = matrix( 0,n_cats, n_vars)
-  sig_be = matrix( sigma2_beta, n_cats,n_vars)
-  prop_per_alpha = rep( 0.5, n_cats)
-  prop_per_beta = rep(0.5, (n_cats*n_vars))
-  
-  # Run DMbvs
-  if( MCMC == "Gibbs" ){
-    # Run model
-    output <- dmbvs_gibbs( XX = X, YY = Y, alpha = alpha., beta = beta., mu_al = mu_al, sig_al = sig_al, mu_be = mu_be, sig_be = sig_be, aa_hp = aa, bb_hp = bb, prop_per_alpha = prop_per_alpha, prop_per_beta = prop_per_beta, iterations, thin = thin, 1 )
-    names( output ) <- c("alpha", "beta")
+    alpha.[ , 1] <-   matrix( scale( log( colSums( z ) ) )  )
     
-    return( output )
-  }else{
-    output <- dmbvs_ss( XX = X, YY = Y, alpha = alpha., beta = beta., mu_al = mu_al, sig_al = sig_al, mu_be = mu_be, sig_be = sig_be, aa_hp = aa, bb_hp = bb, prop_per_alpha = prop_per_alpha, prop_per_beta = prop_per_beta, iterations, thin = thin, 1 )
-    names( output ) <- c("alpha", "beta")
-    
-    return( output )
-  }
-}
+    cormat = matrix(0, B_sim, covariates_sim)
+    pmat = matrix(0, B_sim, covariates_sim)
+     zz = z/rowSums(z) # compositionalize
 
+    for(rr in 1:B_sim){
+      for(cc in 1:covariates_sim){
+        pmat[rr, cc] = stats::cor.test( x[, cc], zz[, rr], method = "spearman", exact = F)$p.value
+        cormat[rr, cc] = stats::cor( x[, cc], zz[, rr], method = "spearman")
+      }
+    }
+
+    # defaults to 0.2 false discovery rate
+    pm <- matrix((stats::p.adjust(c(pmat), method = "fdr") <= 0.2) + 0, B_sim, covariates_sim)
+    betmat <- cormat * pm
+
+    phi.[ , , 1] <- matrix( betmat , B_sim, covariates_sim)
+    zeta.[ , , 1] <- matrix( (betmat != 0)*1, B_sim, covariates_sim)
+    
+  }
+  
+  # Run model
+  output <- dm_bvs( iterations, thin, alpha., z, x, phi., cc., uu, sigma2_alpha, zeta., sigma2_phi, a, b )
+  names( output ) <- c( "alpha", "zeta", "phi" )
+  return( output )
+}
