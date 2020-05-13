@@ -5,7 +5,9 @@
 
 # Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested
 DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = NULL, phi = NULL, zeta = NULL,
-                         sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), a = 1, b = 9, warmstart = T, seed = 1 ){
+                         sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), prior = "BB", a = 1, b = 9, 
+                         a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1,
+                         warmstart = T, seed = 1 ){
   library(mvtnorm)
   library(DMLMbvs)
   library(MCMCpack)
@@ -34,6 +36,15 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
     stop("Bad input: Data must be supplied")
   }
   
+  if( prior == "MRF_fixed" & is.null( G ) ){
+    stop("Bad input: MRF prior requires a known graphical structure")
+  }
+  
+  if( (prior != "BB") + (prior != "MRF_fixed") + (prior != "MRF_unknown") == 3 ){
+    stop("Bad input: prior is not in correct format")
+  }
+  
+  
   # Adjust inputs if x,z are provided
   
   B_sim <- ncol( z ) 
@@ -52,7 +63,7 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
   phi. <- array( 0, dim = c( B_sim, covariates_sim, samples ) )
   
   # Adjust inital values for alpha, zeta, phi, psi, and xi if they are still NULL
-  alpha.[ , 1] <- if( is.null( alpha ) ){ rnorm( n = 10 )}else{ alpha }  
+  alpha.[ , 1] <- if( is.null( alpha ) ){ rnorm( n = B_sim )}else{ alpha }  
   zeta.[ , , 1] <- ifelse( is.null( zeta ), 0, zeta )
   phi.[ , , 1]  <-  if( is.null( phi )){ rnorm( n = B_sim*covariates_sim )*zeta.[,,1]}else{ phi }  
   
@@ -88,8 +99,40 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
     
   }
   
+  # Graph parameters
+  Omega. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  Var. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  G. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  
+  # Adjust inital values for graphical parameters if they are still NULL
+  pie <- ifelse( is.null( pie ), 2/( covariates_sim - 1), pie )
+  
+  set_V <- function( G. = G, v0. = v0, v1. = v1 ){
+    G_in <- G.
+    G_out <- 1 - G.
+    
+    V <- v1.*G_in + v0.*G_out
+    diag( V ) <- 0
+    return(V)
+  }
+  
+  Omega.[ , , 1 ] <- if( is.null( Omega ) ){ diag( covariates_sim ) }else{ Omega }
+  G.[ , , 1 ] <- if( is.null( G ) ){ 0 }else{ G }
+  
+  Var.[ , , 1] <- set_V( G.[ , , 1 ], v0, v1 )
+  S. <- t( x ) %*% x
+  
+    
+  
   # Run model
-  output <- dm_bvs( iterations, thin, alpha., z, x, phi., cc., uu, sigma2_alpha, zeta., sigma2_phi, a, b )
-  names( output ) <- c( "alpha", "zeta", "phi" )
+  output <- dm_bvs( iterations, thin, alpha., z, x, phi., cc., uu, sigma2_alpha, zeta., sigma2_phi, prior, a, b, Omega., G., Var., S., v0, v1, a_G, b_G, pie, lambda )
+  if( prior == "BB "){
+    names( output ) <- c( "alpha", "zeta", "phi" )
+  }else{
+    names( output ) <- c( "alpha", "zeta", "phi", "omega", "G" )
+  }
+  
+  
+
   return( output )
 }
