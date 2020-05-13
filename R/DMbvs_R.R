@@ -126,13 +126,15 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
   
   # Run model
   output <- dm_bvs( iterations, thin, alpha., z, x, phi., cc., uu, sigma2_alpha, zeta., sigma2_phi, prior, a, b, Omega., G., Var., S., v0, v1, a_G, b_G, pie, lambda )
-  if( prior == "BB "){
-    names( output ) <- c( "alpha", "zeta", "phi" )
+  if( prior == "BB"){
+    out <<- output[1:3]
+    names( out ) <- c( "alpha", "zeta", "phi" )
   }else{
-    names( output ) <- c( "alpha", "zeta", "phi", "omega", "G" )
+    out <<- output
+    names( out ) <- c( "alpha", "zeta", "phi", "omega", "G" )
   }
   
   
 
-  return( output )
+  return( out )
 }

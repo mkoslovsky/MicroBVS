@@ -1,32 +1,58 @@
 # Code to simulate data for DMLMbvs model
 
-simulate_DMLM <- function( subject_sim = 50, B_sim = 50, covariates_sim = 50, active_cov = 10, covar = 0.4, seed = 111 ){
+simulate_DMLM <- function( subject_sim = 50, B_sim = 50, n_vars = 50, active_cov = 10, rho = NULL, Sigma = NULL, seed = 111 ){
   
   # Call libraries  
   library(mvtnorm) 
   library(MCMCpack)
   
+  # Defense
+  if( !is.null( rho ) & !is.null( Sigma ) ){
+    stop("Bad input: Please provide either rho or Sigma for covariate correlation structure.")
+  }
+  
+  if( is.null( rho ) & is.null( Sigma ) ){
+    stop("Bad input: Please provide either rho or Sigma for covariate correlation structure.")
+  }
+  
+  if( !is.null( rho ) ){
+    if( rho > 1 | rho < 0 ){
+      stop("Bad input: Please provide rho between 0 and 1.")
+    }
+  }
+  
+  if( !is.null( Sigma ) ){
+    if( !is.positive.definite( Sigma ) ){
+      stop("Bad input: Please provide positive definite covariance matrix.")
+    }
+  }
+  
+  if( !is.null( Sigma ) ){
+    if( ncol(Sigma) != n_vars ){
+      stop("Bad input: Please provide covariance matrix to match the number of covariates")
+    }
+  }  
+  
+  # covariance matrix for predictors
+  if( !is.null( rho ) ){
+    Sigma <- matrix( 0, n_vars, n_vars )
+    Sigma = rho^abs(row(Sigma) - col(Sigma))
+  }
+  
+  
   # Set seed 
   set.seed( seed )
   
   # Set covariance strucuture for covariates 
-  sig <- diag(covariates_sim)
-  for( i in 1:covariates_sim ){
-    for( j in 1:covariates_sim ){
-      if( i != j){
-        sig[ i , j] = covar^abs(i - j)
-      }
-    }
-  }
   
-  X <- rmvnorm( subject_sim, rep( 0, covariates_sim ), sig )
+  X <- scale( rmvnorm( subject_sim, rep( 0, n_vars ), Sigma ) ) 
   
-  zeta_sim <- matrix( 0, B_sim, covariates_sim)
-  true_cov <- cbind( sample( seq( 1, active_cov ), active_cov , replace = T ),sample( seq( 1, covariates_sim ), active_cov) )
+  zeta_sim <- matrix( 0, B_sim, n_vars)
+  true_cov <- cbind( sample( seq( 1, active_cov ), active_cov , replace = T ),sample( seq( 1, n_vars ), active_cov) )
   zeta_sim[  true_cov ] <- 1
   alpha_sim <- matrix( 1, nrow = subject_sim , ncol = 1)%*%( runif( n = B_sim, -2.3,2.3 ) )
   true_coeff <- runif( 10, 0.75, 1.25)
-  phi_sim <- matrix( 0, B_sim, covariates_sim)
+  phi_sim <- matrix( 0, B_sim, n_vars)
   phi_sim[ true_cov ] <- true_coeff*sample(c(1,-1), 10, replace = TRUE)
   
   inside_sim <- exp( alpha_sim + X%*%t(phi_sim) )

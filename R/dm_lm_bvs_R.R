@@ -2,7 +2,7 @@
 dm_lm_bvs_R <- function( iterations = 10000, thin = 10, y = NULL, z = NULL, x = NULL, alpha = NULL, phi = NULL,
                          psi = NULL, zeta = NULL, xi = NULL, sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ),
                          h_alpha = 1, h_beta = 1, a_m = 1, b_m = 9, a = 1, b = 9,
-                         a_0 = 2, b_0 = 2, seed = 1 ){
+                         a_0 = 2, b_0 = 2, a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1, prior = "BB", seed = 1 ){
   library(mvtnorm)
   library(DMLMbvs)
   library(MCMCpack)
@@ -85,10 +85,41 @@ dm_lm_bvs_R <- function( iterations = 10000, thin = 10, y = NULL, z = NULL, x = 
     uu[ n ] <- rgamma( 1, sum_Z, sum_Z );
   }
   
+  # Graph parameters
+  Omega. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  Var. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  G. <- array( 0, dim = c( covariates_sim, covariates_sim, samples ) )
+  
+  # Adjust inital values for graphical parameters if they are still NULL
+  pie <- ifelse( is.null( pie ), 2/( covariates_sim - 1), pie )
+  
+  set_V <- function( G. = G, v0. = v0, v1. = v1 ){
+    G_in <- G.
+    G_out <- 1 - G.
+    
+    V <- v1.*G_in + v0.*G_out
+    diag( V ) <- 0
+    return(V)
+  }
+  
+  Omega.[ , , 1 ] <- if( is.null( Omega ) ){ diag( covariates_sim ) }else{ Omega }
+  G.[ , , 1 ] <- if( is.null( G ) ){ 0 }else{ G }
+  
+  Var.[ , , 1] <- set_V( G.[ , , 1 ], v0, v1 )
+  S. <- t( x ) %*% x
+  
   
   # Run model
-  output <- dm_lm_bvs( iterations, thin, alpha., y, z, x, phi., psi., cc, uu, sigma2_alpha, zeta., xi., sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m)
+  output <- dm_lm_bvs( iterations, thin, alpha., y, z, x, phi., psi., cc, uu, sigma2_alpha, zeta., xi., sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m,
+                        prior,  Omega., G., Var., S., v0, v1, a_G, b_G, pie, lambda )
   
+  if( prior == "BB "){
+    out <<- output[1:5]
+    names( out ) <- c( "alpha", "zeta", "phi", "psi", "xi"  )
+  }else{
+    out <<- output 
+    names( out ) <- c( "alpha", "zeta", "phi", "psi", "xi", "omega", "G" )
+  }
   
-  return( output )
+  return( out )
 }
