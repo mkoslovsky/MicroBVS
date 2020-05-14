@@ -1,7 +1,7 @@
 # Wrapper function for the Rcpp code to simulate DTM data  
 # DTMbvs: Dirichlet-tree Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data - an R Package
 simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
-                      covariates_sim = 50, corr = 0.2, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2, seed = 1212 ){
+                      covariates_sim = 50, rho = NULL, Sigma = NULL, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2, seed = 1212 ){
   
   library(mvtnorm)
   library(MCMCpack)
@@ -68,6 +68,38 @@ simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
     if( num_cov >= covariates_sim ){
       stop("Bad input: number of associated covariates should be less than total number of covariates")
     }
+  
+    if( !is.null( rho ) & !is.null( Sigma ) ){
+      stop("Bad input: Please provide either rho or Sigma for covariate correlation structure.")
+    }
+  
+    if( is.null( rho ) & is.null( Sigma ) ){
+      stop("Bad input: Please provide either rho or Sigma for covariate correlation structure.")
+    }
+  
+    if( !is.null( rho ) ){
+      if( rho > 1 | rho < 0 ){
+        stop("Bad input: Please provide rho between 0 and 1.")
+      }
+    }
+  
+    if( !is.null( Sigma ) ){
+      if( !is.positive.definite( Sigma ) ){
+        stop("Bad input: Please provide positive definite covariance matrix.")
+      }
+    }
+  
+    if( !is.null( Sigma ) ){
+      if( ncol(Sigma) != covariates_sim ){
+        stop("Bad input: Please provide covariance matrix to match the number of covariates")
+      }
+    }  
+  
+    # covariance matrix for predictors
+    if( !is.null( rho ) ){
+      Sigma <- matrix( 0, covariates_sim, covariates_sim )
+      Sigma = rho^abs(row(Sigma) - col(Sigma))
+    }
     
     # Simulate random DTM with phylogenetic tree
     # Relies on 'ape' package
@@ -86,18 +118,8 @@ simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
     # Set parameters
     B_sim <- sum( Cv )
     
-    # Set correlation structure between covariates
-    sig <- diag( covariates_sim )
-    for( i in 1:covariates_sim ){
-      for( j in 1:covariates_sim ){
-        if( i != j){
-          sig[ i , j] = corr^abs(i - j)
-        }
-      }
-    }
-    
     # Simulate covariates for selection
-    X <- rmvnorm( subject_sim, rep( 0, nrow(sig) ), sig )
+    X <- scale( rmvnorm( subject_sim, rep( 0, covariates_sim ), Sigma ) ) 
     
     # Set true inclusion indicators
     zeta_sim <- matrix( 0 , B_sim, covariates_sim )
@@ -140,7 +162,7 @@ simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
     Y <- node_counts[ , 1:K]
     X <- scale(X)
     
-    return( list( Y = Y, X = X, phi_sim = phi_sim, zeta_sim = zeta_sim, tree = tree.ex ) )
+    return( list( Y = Y, X = X, phi_sim = phi_sim, zeta_sim = zeta_sim, tree = tree.ex, Sigma = Sigma ) )
   }
 
 

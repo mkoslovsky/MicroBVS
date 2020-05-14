@@ -1531,112 +1531,10 @@ List between_phi_zeta_swap_update_MRF_tree_cpp(
   // Between Model Step
   // Initiate memory space
   int B = zeta.n_rows;
-  int P = zeta.n_cols;
-  int dim = B*P;
+  int P = zeta.n_cols; 
   int N = x.n_rows;
   
-  // Set proposal to current
-  arma::mat zeta_proposal( B, P );
-  arma::mat phi_proposal( B, P );
-  zeta_proposal = zeta;
-  phi_proposal = phi;
-  
-  // Add/Delete or swap
-  int swap = rbinom( 1, 1, 0.5 )[ 0 ];
-  IntegerVector add_vcp;
-  IntegerVector delete_vcp;
-  
-  // Swap
-  if( swap == 1 ){
-    
-    // Get which included and excluded
-    IntegerVector included( 0 );
-    IntegerVector excluded( 0 );
-    for( int bp = 0; bp < dim; ++bp ) {
-      if( zeta[ bp ] == 1 ){
-        included.push_back( bp );
-      }else{
-        excluded.push_back( bp );
-      }
-    }
-    
-    // Adjust missing indicator
-    if( ( included.size() == 0 ) | ( excluded.size() == 0 ) ){
-      swap = 0;
-    }
-    
-    // If there is at least one included and excluded - perform a swap
-    if( swap == 1 ){
-      
-      // Select covariate to include
-      if( excluded.size() > 1 ){
-        add_vcp =  sample_cpp( excluded );
-      }else{
-        add_vcp = excluded;
-      }
-      
-      // Get a covariate to delete
-      if( included.size() > 1 ){
-        delete_vcp =  sample_cpp( included );
-      }else{
-        delete_vcp = included;
-      }
-      
-      // Update proposal
-      // For added
-      zeta_proposal[ add_vcp[ 0 ] ] = 1;
-      double current_phi = phi[ add_vcp[ 0 ] ];
-      phi_proposal[ add_vcp[ 0 ] ] = help::phi_prop_cpp( current_phi );
-      
-      // For deleted
-      zeta_proposal[ delete_vcp[ 0 ] ] = 0;
-      phi_proposal[ delete_vcp[ 0 ] ] = 0;
-      
-      // Get branch location of added and deleted to simplify likelihood calculation.
-      int add_mod = add_vcp[ 0 ] % B;
-      int del_mod = delete_vcp[ 0 ] % B;
-      int add_mod_P = floor( add_vcp[ 0 ]/B );
-      int del_mod_P = floor( delete_vcp[ 0 ]/B );
-      int branch_loc_add = branch_location[ add_mod ] - 1 ;
-      int branch_loc_del = branch_location[ del_mod ] - 1 ;
-      
-      // Adjust loggamma for proposal
-      arma::mat loggamma_proposal = loggamma;
-      
-      for( int n = 0; n < N; ++n ){
-        loggamma_proposal( n , add_mod ) = loggamma( n , add_mod ) +  phi_proposal( add_mod, add_mod_P )*x( n, add_mod_P ) - phi( add_mod, add_mod_P )*x( n, add_mod_P ) ;
-        loggamma_proposal( n , del_mod ) = loggamma_proposal( n , del_mod ) +  phi_proposal( del_mod, del_mod_P )*x( n, del_mod_P ) - phi( del_mod, del_mod_P )*x( n, del_mod_P ) ;
-      }
-      
-      double r = 0;
-      
-      // Calculate ratio
-      if( add_mod != del_mod){
-        r = help::log_like_cpp( x, branch_loc_add, node_children_pointer, branch_counts, subtree_counts, loggamma_proposal ) + help::log_like_cpp( x, branch_loc_del, node_children_pointer, branch_counts, subtree_counts, loggamma_proposal ) + help::log_phi_cpp( wrap( phi_proposal ), sigma2_phi, wrap( zeta_proposal ) ) + help::log_zeta_G_cpp( a_G, zeta_proposal, b_G, G, add_mod ) + help::log_zeta_G_cpp( a_G, zeta_proposal, b_G, G, del_mod ) - ( help::log_like_cpp( x, branch_loc_add, node_children_pointer, branch_counts, subtree_counts, loggamma ) + help::log_like_cpp( x, branch_loc_del, node_children_pointer, branch_counts, subtree_counts, loggamma ) + help::log_phi_cpp( wrap( phi ), sigma2_phi, wrap( zeta ) ) + help::log_zeta_G_cpp( a_G, zeta, b_G, G, add_mod ) + help::log_zeta_G_cpp( a_G, zeta, b_G, G, del_mod ) );
-      }else{
-        r = help::log_like_cpp( x, branch_loc_add, node_children_pointer, branch_counts, subtree_counts, loggamma_proposal ) + help::log_phi_cpp( wrap( phi_proposal ), sigma2_phi, wrap( zeta_proposal ) ) + help::log_zeta_G_cpp( a_G, zeta_proposal, b_G, G, add_mod ) - ( help::log_like_cpp( x, branch_loc_add, node_children_pointer, branch_counts, subtree_counts, loggamma ) + help::log_phi_cpp( wrap( phi ), sigma2_phi, wrap( zeta ) ) + help::log_zeta_G_cpp( a_G, zeta, b_G, G, add_mod ) );
-      }
-      
-      
-      // Calculate acceptance probability
-      double a  = log( runif( 1 )[ 0 ] );
-      
-      // Determine acceptance
-      if( a < r ){
-        zeta[ add_vcp[ 0 ] ] = zeta_proposal[ add_vcp[ 0 ] ];
-        phi[ add_vcp[ 0 ] ] = phi_proposal[ add_vcp[ 0 ] ];
-        zeta[ delete_vcp[ 0 ] ] = zeta_proposal[ delete_vcp[ 0 ] ];
-        phi[ delete_vcp[ 0 ] ] = phi_proposal[ delete_vcp[ 0 ] ];
-        
-        loggamma = loggamma_proposal;
-      }
-      
-    } // If not missing (still swap)
-    
-  } // If swap
-  
-  if( swap == 0 ){
-    
+  // Add/Delete  
     // Choose a branch 
     IntegerVector branches = seq( 0, B-1 );
     int branch_j = sample_cpp( branches );
@@ -1715,7 +1613,6 @@ List between_phi_zeta_swap_update_MRF_tree_cpp(
         loggamma = loggamma_proposal;
       }
     }
-  }  // Add/delete
   
   // Return output
   List between( 3 );

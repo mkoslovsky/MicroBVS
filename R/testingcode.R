@@ -93,10 +93,37 @@ out2 <- dm_lm_bvs_R( iterations = 10000, thin = 10, y = data$Y, z = data$Z, x = 
                      a_0 = 2, b_0 = 2, seed = 1,  prior = "MRF_unknown", a_G = log(0.1/0.9), b_G = 0.2, v0 = 0.0001, v1 = 10 )
 sele <- selected_DMLM(out2, burnin = 500, G = T) # From selectedDMLM.R 
 
-# Test DTM BB 
+# Test DTM BB (GOOD TO GO)
+sourceCpp("MicroBVStest.cpp")
+data <- simulate_DTM( rho = 0.3, num_leaf = 30 ) # 8 minutes for 10000 and 30 leaves
+start_time <- Sys.time()
+out2 <- DTMbvs_R( iterations = 20000, tree = data$tree, Y = data$Y, X = data$X )
+end_time <- Sys.time()
+sele2 <- selected_DTM( out2, burnin = 500 )
 
+# Test DTM MRF fixed (Seems to have really poor performance with high correlation)
+Sigma <- matrix(0,30,30)
+Sigma[1:15,1:15] <- 0.7
+diag(Sigma) <- 1
+G <- (Sigma != 0 )*1
+set.seed(12)
+data <- simulate_DTM( covariates_sim = 30, num_leaf = 30, Sigma = Sigma ) #  
+start_time <- Sys.time()
+out2 <- DTMbvs_R( iterations = 1000, tree = data$tree, Y = data$Y, X = data$X, prior = "MRF_fixed", G = G,a_G = log(0.1/0.9), b_G = 0.3,  )
+end_time <- Sys.time()
+sele2 <- selected_DTM( out2, burnin = 500 )
 
-
+# Test DTM MRF unknown (GOOD TO GO)
+Sigma <- matrix(0,30,30)
+Sigma[1:15,1:15] <- 0.3
+diag(Sigma) <- 1
+G <- (Sigma != 0 )*1
+set.seed(12)
+data <- simulate_DTM( covariates_sim = 30, num_leaf = 30, Sigma = Sigma ) #  
+start_time <- Sys.time()
+out2 <- DTMbvs_R( iterations = 10000, tree = data$tree, Y = data$Y, X = data$X, prior = "MRF_unknown", a_G = log(0.1/0.9), b_G = 0.3 )
+end_time <- Sys.time()
+sele2 <- selected_DTM( out2, burnin = 0, G = T )
 
 
 # Test Graphical Model 
