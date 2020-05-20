@@ -79,6 +79,13 @@ selected_DTM <- function( dtm_obj = NULL, threshold = c( 0.5 ), plotting = FALSE
   selected_name <- cbind( edge_lab.[ branch_list ], cov_lab.[ covariate_list ] )
   colnames(selected_name) <- c( "Branch", "Covariate" )
 
-  return( list( selected_zeta = selected_zeta, mppi_zeta = zeta_means, selected_name = selected_name, estimated_G = estimated_G) )
+  
+  if( G ){
+    out <- list( selected_zeta = selected_zeta, mppi_zeta = zeta_means, selected_name = selected_name, estimated_G = estimated_G)
+  }else{
+    out <- list( selected_zeta = selected_zeta, mppi_zeta = zeta_means, selected_name = selected_name )
+  }
+  
+    return( out )
 }
 
