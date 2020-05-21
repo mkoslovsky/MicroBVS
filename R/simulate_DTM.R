@@ -1,7 +1,7 @@
 # Wrapper function for the Rcpp code to simulate DTM data  
 # DTMbvs: Dirichlet-tree Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data - an R Package
 simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
-                      covariates_sim = 50, rho = NULL, Sigma = NULL, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2, seed = 1212 ){
+                      covariates_sim = 50, rho = NULL, Sigma = NULL, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2 ){
   
   library(mvtnorm)
   library(MCMCpack)
