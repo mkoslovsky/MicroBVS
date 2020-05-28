@@ -30,5 +30,4 @@ Maintainer: \packageMaintainer{MicroBVS}
 ~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
 }
 \examples{
-~~ simple examples of the most important functions ~~
-}
+~~ simple examples of the most important functions ~~}
