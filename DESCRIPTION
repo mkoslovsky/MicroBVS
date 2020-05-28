@@ -5,7 +5,8 @@ Version: 1.0
 Date: 2020-05-07
 Author: Matt Koslovsky and Marina Vannucci 
 Maintainer: Matthew Koslovsky <mkoslovsky12@gmail.com>
-Description: Performs Bayesian variable selection for multivariate count data with tree-like structure as well as repeated measures stucture.
+Description: Performs Bayesian variable selection for multivariate count 
+    data with tree-like structure as well as repeated measures stucture.
 License: MIT + file LICENSE
 Imports: Rcpp (>= 0.12.19), RcppArmadillo (>= 0.9.200.5.0), ggplot2 (>= 2.2.1), mvtnorm (>= 1.0-8), MCMCpack (>= 1.4-4), ape (>= 5.2), GGMselect (>= 0.1-12.1)
 LinkingTo: Rcpp, RcppArmadillo
