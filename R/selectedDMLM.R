@@ -6,6 +6,8 @@ selected_DMLM <- function( dmlm_obj = NULL, threshold = c(0.5, 0.5), plotting = 
   # threshold - 2 X 1 vector for posterior probability of inclusion threshold for zeta and xi (in order)
   # plotting - logical (True or False) indicator to plot # selected xi and zeta as well as PPI for zeta and xi 
   # burnin - number of MCMC samples to drop before inference, Default = 0
+  # G - boolean if true, provide posterior edge inclusion 
+  
   library(ggplot2)
   
   if( burnin%%1 != 0){

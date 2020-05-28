@@ -1,5 +1,4 @@
-# Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested for DTMbvs package
-# DTMbvs: Dirichlet-tree Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data - an R Package
+# Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested for DTM model 
 DTMbvs_R <- function( iterations = 50000, thin = 10, tree = NULL, Y = NULL, X = NULL, prior = "BB", alpha = NULL, phi = NULL, zeta = NULL, sigma2_alpha = 10, sigma2_phi = 10,
                       aa = 1, bb = 1, a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.1, v1 = 10, pie = NULL, lambda = 1, subject_sim = 100, num_leaf = 5,
                       covariates_sim = 50, corr = 0.2, num_branch = 3, num_cov = 5, seed = 1212, eval = TRUE, warmstart = FALSE ){

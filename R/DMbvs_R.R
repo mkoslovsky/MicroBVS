@@ -1,8 +1,5 @@
-# Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested for DTMbvs package
-# DTMbvs: Dirichlet Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data - an R Package
-# This runs a version of Wadsworth (2017) An integrative Bayesian Dirichlet-multinomial regression model for the analysis of taxonomic abundances in microbiome data
-# This is much faster than DTMbvs for special case of #taxa = #branches in the tree
-
+# Wrapper function for the Rcpp code to run DTM variable selection 
+ 
 # Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested
 DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = NULL, phi = NULL, zeta = NULL,
                          sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), prior = "BB", a = 1, b = 9, 
@@ -21,10 +18,21 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
   # x - subject x covariate matrix of measures
   # alpha - part X 1 vector of initial intercept values
   # phi - part X covariate matrix of initial regression coefficients
+  # zeta - part X covariate matrix of intial inclusion indicators
   # sigma2_alpha - prior value for alpha variance, Default = sqrt(10)
   # sigma2_phi - prior value for phi variance, Default = sqrt(10)
+  # prior - Inclusion indicator prior. Takes values "BB" (Default), "MFR_fixed", or "MRF_unknown".
   # a -  parameter for beta prior for covariate inclusion probability, Default = 1
   # b -  parameter for beta prior for covariate inclusion probability, Default = 9
+  # a_G - baseline inclusion parameter for MRF prior, Default = log(0.1/0.9)
+  # b_G - similarity inclusion parameter for MRF prior, Default = 0.5
+  # Omega - Initial precision matrix
+  # G - Graphical structure for known graph
+  # v0 - Variance for exclusion of edge, Default = 0.01
+  # v1 - Variance for inclusion of edge, Default = 10
+  # pie - Prior probability of edge
+  # lambda - Prior for diagonal elements of precision matrix
+  # warmstart - boolean if true, start model using informed initial values. 
   # seed - set random seed for simulated data, Default = 1
   
   

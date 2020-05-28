@@ -1,42 +1,19 @@
 # Wrapper function for the Rcpp code to simulate DTM data  
-# DTMbvs: Dirichlet-tree Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data - an R Package
 simulate_DTM <- function( subject_sim = 100, tree = NULL, num_leaf = 5,
-                      covariates_sim = 50, rho = NULL, Sigma = NULL, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2 ){
+                      covariates_sim = 50, rho = NULL, Sigma = NULL, num_branch = 3, num_cov = 5, phi_min = 0.9, phi_max = 1.2, seed = 1234 ){
   
   library(mvtnorm)
   library(MCMCpack)
   library(ape)
   library(GGMselect)
-  # iterations - integer number of MCMC samples, default = 50000
-  # thin - integer MCMC by # thin, default = 10
-  # tree - tree object .tre file to be sourced
-  # Y - N x branch matrix of count data. Make sure branch order corresponds to edge list in tree
-  # X - N x P matrix of covariates
-  # prior - name of selection prior to use. Takes values "BB" beta-binomial (default), "MRF_fixed" known Markov random field, "MRF_unknown" unknown Markov random field
-  # alpha branch x 1 vector of branch intercepts
-  # phi branch x P matrix of regression coefficients
-  # zeta - branch x P matrix of inclusion indicators
-  # sigma2_alpha - prior variance for alpha, default = 10
-  # sigma2_phi - prior variance for phi, default = 10
-  # aa - double beta-binomial hyperparameter
-  # bb - double beta-binomial hyperparameter
-  # a_G - double MRF hyperparameter
-  # b_G - double MRF hyperparameter
-  # Omega - P x P concentration matrix
-  # G - P x P adjacency matrix for relational graph
-  # v0 - double variance of exclusion for the relational graph
-  # v1- double variance of inclusion for the relational graph
-  # pie - double prior probability of inclusion for the relational graph
-  # lambda - double exponential prior hyperparameter
   # subject_sim - integer number of subjects to simulate, default = 100
   # num_leaf - integer number of leaves in tree to simulate, default = 5
   # covariates_sim - iteger number of covariates to simulate, default = 50
-  # corr - double correlation structure, default = 0.20
+  # rho - double correlation structure, default = 0.20
   # num_branch = interger number of branches the associated covariates are in, default = 3
   # num_cov - integer number of associated covariates to simulate, default = 5
   # seed - integer seed #, default = 1234
-  # eval - boolean if true, run model on simulated data. Otherwise, simply simulate
-  # warmstart - boolean if true, start model using informed initial values. 
+  
   
   # Defense
   

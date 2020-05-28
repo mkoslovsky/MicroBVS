@@ -6,6 +6,7 @@ selected_DTM <- function( dtm_obj = NULL, threshold = c( 0.5 ), plotting = FALSE
   # burnin - number of MCMC samples to drop before inference, default = 0
   # cov_lab - P-dimensional vector of covariate names
   # edge_lab - Branch-dimensional vector of branch names
+  # G - boolean if true, provide posterior edge inclusion 
 
   library(ggplot2)
 

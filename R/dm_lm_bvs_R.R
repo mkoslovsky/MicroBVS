@@ -10,7 +10,7 @@ dm_lm_bvs_R <- function( iterations = 10000, thin = 10, y = NULL, z = NULL, x = 
   library(ggplot2)
   library(RcppArmadillo)
   
-  # iterations - Number of MCMC samples, Default = 20000
+  # iterations - Number of MCMC samples, Default = 10000
   # thin - Then MCMC by # thin, Default = 10
   # y - subject x 1 vector of continuous response
   # z - subject x part matrix of multivariate count data
@@ -25,11 +25,20 @@ dm_lm_bvs_R <- function( iterations = 10000, thin = 10, y = NULL, z = NULL, x = 
   # h_alpha - prior variance for intercept term a_0, Default = 1
   # h_beta - prior variance for beta terms for balances, Default = 1
   # a_m -  parameter for beta prior for balance inclusion probability, Default = 1
-  # b_m -  parameter for beta prior for balance inclusion probability, Default = 1
+  # b_m -  parameter for beta prior for balance inclusion probability, Default = 9
   # a -  parameter for beta prior for covariate inclusion probability, Default = 1
-  # b -  parameter for beta prior for covariate inclusion probability, Default = 1
+  # b -  parameter for beta prior for covariate inclusion probability, Default = 9
   # a_0 - shape parameter for inverse-gamma prior for sigma, Default = 2
-  # b_0 - scale parameter for inverse-gamme prior for sigma, Default = 2
+  # b_0 - scale parameter for inverse-gamma prior for sigma, Default = 2
+  # a_G - baseline inclusion parameter for MRF prior, Default = log(0.1/0.9)
+  # b_G - similarity inclusion parameter for MRF prior, Default = 0.5
+  # Omega - Initial precision matrix
+  # G - Graphical structure for known graph
+  # v0 - Variance for exclusion of edge, Default = 0.01
+  # v1 - Variance for inclusion of edge, Default = 10
+  # pie - Prior probability of edge
+  # lambda - Prior for diagonal elements of precision matrix
+  # prior - Inclusion indicator prior. Takes values "BB" (Default), "MFR_fixed", or "MRF_unknown".
   # seed - set random seed for simulated data, Default = 1
   
   
