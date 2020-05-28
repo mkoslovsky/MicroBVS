@@ -4,7 +4,6 @@ dm_lm_bvs_R <- function( iterations = 10000, thin = 10, y = NULL, z = NULL, x = 
                          h_alpha = 1, h_beta = 1, a_m = 1, b_m = 9, a = 1, b = 9,
                          a_0 = 2, b_0 = 2, a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1, prior = "BB", seed = 1 ){
   library(mvtnorm)
-  library(DMLMbvs)
   library(MCMCpack)
   library(Rcpp)
   library(ggplot2)

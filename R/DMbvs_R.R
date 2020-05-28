@@ -5,8 +5,7 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
                          sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), prior = "BB", a = 1, b = 9, 
                          a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1,
                          warmstart = T, seed = 1 ){
-  library(mvtnorm)
-  library(DMLMbvs)
+  library(mvtnorm) 
   library(MCMCpack)
   library(Rcpp)
   library(ggplot2)
