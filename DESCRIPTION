@@ -12,3 +12,5 @@ Imports: Rcpp (>= 0.12.19), RcppArmadillo (>= 0.9.200.5.0), ggplot2 (>= 2.2.1), 
 LinkingTo: Rcpp, RcppArmadillo
 VignetteBuilder: knitr
 Suggests: knitr, rmarkdown, RefManageR
+Depends: 
+    R (>= 2.10)
