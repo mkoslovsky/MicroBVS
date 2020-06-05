@@ -1,8 +1,22 @@
-* Edit the help file skeletons in 'man', possibly combining help files for multiple functions.
-* Edit the exports in 'NAMESPACE', and add necessary imports.
-* Put any C/C++/Fortran code in 'src'.
-* If you have compiled code, add a useDynLib() directive to 'NAMESPACE'.
-* Run R CMD build to build the package tarball.
-* Run R CMD check to check the package tarball.
+In this folder you'll find code for the R package MicroBVS for the book chapter:
 
-Read "Writing R Extensions" for more information.
+“Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data”, by MD Koslovsky and M Vannucci 
+
+The main functions operate in C++ via the R package Rcpp. These functions can be sourced by a set of wrapper functions that enable easy implementation of the code in the R environment. Various functions are available that produce, summarize, and plot the results for inference.  
+
+This package relies on various R packages that need to be installed in the R environment before running. To install, use the install.packages(‘’) command for the following packages:
+Rcpp 
+RcppArmadillo  
+MCMCpack
+mvtnorm 
+ggplot2
+devtools
+ape
+igraph
+
+Then to install the DMLMbvs package, simply run 
+
+library(devtools)
+install_github( "mkoslovsky/MicroBVS", build_vignettes = TRUE)
+
+in the R console. 
