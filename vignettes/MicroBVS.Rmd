@@ -19,11 +19,10 @@ knitr::opts_chunk$set(
  
 
 # Introduction 
-In this vignette, we provide worked examples with code and output on simulated data to demonstrate how to apply the Bayesian variable selection methods for Dirichlet-Multinonmial, Dirichlet-tree Multinomial, and joint modelling approaches referenced in the chapter *Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data* to analyze compositional data in practice. Note that this package also contains a subset of the MOMS-PI data used in our application of the DM model. 
+In this vignette, we provide worked examples on simulated data to demonstrate how to apply the Bayesian variable selection methods for compositional data referenced in the chapter *Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data*. Note that this package also contains a subset of the MOMS-PI data used in our application of the DM model. 
 
 # Dirichlet-Multinomial Bayesian Variable Selection   
-
-## Simulate Data
+ 
 Having installed and loaded the `MicroBVS` package into the R environment (See README for instructions), generate a simulated data set for a Dirichlet-Multinomial model using the `simulate_DM()` function. 
 
 ```{r setup, message = FALSE, warning = FALSE, results = "hide" }
@@ -44,22 +43,21 @@ data(model2)
 data(model4)
 data(model5)
 ```
-
-## Run model
+ 
 To run the model with a Beta-Binomial prior, simply input the data to the `DMbvs_R()` function and set `prior = "BB"`.  
 
 ```{r, eval = F, include = T }
 model1 <-  DMbvs_R( z = data_DM$Y, x = data_DM$X[,-1], prior = "BB",  seed = 1)
 ```
-By default, the algorithm is run for $20,000$ iterations, thinning to every $10^{th}$ iteration, and the hyperparameters for the Beta-Binomial prior are $a=1$ and $b=9$. The object `model1` contains a list of the MCMC output for the taxon-specific intercept terms, $\alpha$, the inclusion indicators, $\zeta$, and corresponding regression coefficients, $\varphi$. To extract selected terms from the model, run
+By default, the algorithm is run for $20,000$ iterations, thinning to every $10^{th}$ iteration, and the hyperparameters for the Beta-Binomial prior are $a=1$ and $b=9$. The `model1` object contains a list of the MCMC samples for the taxon-specific intercept terms, $\alpha$, the inclusion indicators, $\zeta$, and corresponding regression coefficients, $\varphi$. To extract selected terms from the model, run
 
 ```{r, message = FALSE, warning = FALSE, results = "hide" }
 selected1 <-  selected_DM( dm_obj = model1, burnin = 1000, plotting = T)
 ```
 
-`selected1` contains a two element list, where the first element is a number of selected covariate-taxon by 2 dimensional matrix where the first (second) column represents the corresponding row (column) in the  $\varphi$ matrix selected. The second element is a matrix of corresponding MPPIs for each covariate-taxon pair. By setting `plotting = T`, a plot of the sum of covariate-taxon pairs active in each MCMC iteration as well as plot of the MPPIs with the provided significance level is generated. 
+Inclusion is determined with the marginal posterior probability of inclusion (MPPI) for each branch-by-covariate inclusion indicator. By default, the MPPI threshold for significant terms is set to $0.5$. `selected1` contains a two element list, where the first element is a number of selected covariate-taxon by 2 dimensional matrix where the first (second) column represents the corresponding row (column) in the  $\varphi$ matrix selected. The second element is a matrix of corresponding MPPIs for each covariate-taxon pair. By setting `plotting = T`, a plot of the sum of covariate-taxon pairs active in each MCMC iteration as well as plot of the MPPIs with the provided significance level is generated. 
 
-Next, we demonstrate how to run the DM model when there is an graphical structure underlying the relation between covariates. To simulate these data, we first need to define the graphical structure. Here, we generate a graphical structure similar to our simualtion study. 
+Next, we demonstrate how to run the DM model when there is an underlying graphical relation between covariates. To simulate these data, we first need to define the graphical structure. Here, we generate a graphical structure similar to our simualtion study. 
 ```{r,  include = F  }
 set.seed(1)
 ```
@@ -72,13 +70,13 @@ set.seed(1)
       G <- (Sigma != 0 )*1 
       data_DM_G <- simulate_DM( Sigma = Sigma )
 ```
-Assuming the true graphical structure is known, we can run the DM model with a MRF prior with known graphical structure with the following
+Assuming the true graphical structure is known, we can run the DM model with a MRF prior with known graphical structure. 
 ```{r eval=FALSE, include = T}
 model2 <-  DMbvs_R( z = data_DM_G$Y, x = data_DM_G$X[,-1], prior = "MRF_fixed", G = G, seed = 1)
 ```
 By default, the hyperparameters for the MRF prior are set to $a_G = \log(0.1/0.9)$ and $b_G = 0.5$. Similarly, the `selected_DM()` function can be used to extract the results. If the graphical structure is unknown, simply run 
 ```{r, eval = F, include = T  }
-model3 <-  DMbvs_R( z = data_DM_G$Y, x = data_DM_G$X[,-1], prior = "MRF_unknown", b_G = 0.2, seed = 1)
+model3 <-  DMbvs_R( z = data_DM_G$Y, x = data_DM_G$X[,-1], prior = "MRF_unknown", seed = 1)
 ```
 
 
@@ -93,17 +91,15 @@ selected3 <-  selected_DM( dm_obj = model3, burnin = 1000, plotting = F, G = T)
 ```
 The third element in the list `estimated_G`, represents the posterior edge inclusion for the graphical structure. By thresholding, an adjacency matrix can be obtained to plot the corresponding graphical structure using the `igraph` package. 
 
-```{r pressure, echo=FALSE, fig.height=5, fig.width=6, message=FALSE, warning=FALSE  }
+```{r pressure,  fig.height = 5, fig.width = 6, message = FALSE, warning = FALSE  }
 library( igraph )
-graph <- ( selected3$estimated_G > 0.5)*1
-adj <- graph_from_adjacency_matrix( graph , mode = "undirected") 
-
-
-plot( adj,vertex.color="gold", vertex.size=15,  vertex.frame.color="gray", vertex.label.color="black", vertex.label.cex=0.8, vertex.label.dist=2, )
+graph <- ( selected3$estimated_G > 0.5 )*1
+adj <- graph_from_adjacency_matrix( graph , mode = "undirected" ) 
+plot( adj, vertex.color = "gold", vertex.size = 15,  vertex.frame.color = "gray", vertex.label.color = "black", vertex.label.cex = 0.8, vertex.label.dist = 2 )
 ```
 
 
-In this example, the model was able to identify the stronger relations ($\sigma_{ij} = 0.7$) between covariates, but selected fewer edges with simulated $\sigma_{ij} = 0.3$ or  $\sigma_{ij} = 0.5$. In addition to the data, the true regression coefficients are saved in the `data_DM_G` object.  Comparing these to the output, we see the model performed quite well in this toy example.  
+In this example, the model was able to identify the stronger relations ($\sigma_{ij} = 0.7$) between covariates, but selected fewer edges with $\sigma_{ij} = 0.3$ and $\sigma_{ij} = 0.5$. In addition to the data, the true regression coefficients are saved in the `data_DM_G` object.  Comparing these to the output, we see the model performed quite well in this toy example.  
 ```{r message=FALSE}
 which( data_DM_G$betas[,-1] != 0, arr.ind = T ) 
 selected3$selected_zeta
@@ -120,7 +116,7 @@ set.seed(1)
 ```{r message=FALSE}
 data_DTM <- simulate_DTM( rho = 0.3 )
 ```
-Similar to `simulate_DM`, `simulate_DTM` requires `rho` or `Sigma` to be specified. By default, 100 subjects (`subject_sim = 100`) with 50 covariates (`covariates_sim = 50`), and a random tree with 5 leaf nodes (`num_leaf = 5`) are simulated. The function generates six data objects. Namely, the compositional counts `Y`, covariates `X`, true regression coefficients `phi_sim`, true inclusion indicators `zeta_sim`, the random tree `tree`, which is a tree object generated by the `ape` package, and the simulated covariance matrix for the covariates, `Sigma`. These default settings generate a tree structure with *L=5* leaves with *(L-1)x2 = 8* total branches. In the following plot, the branches or edges are labeled e1-e8 and the nodes are labeled 1-9. Node 6 is referred to as the root node, nodes 7-9 are internal nodes, and nodes 1-5 are leaf nodes. 
+Similar to `simulate_DM`, `simulate_DTM` requires `rho` or `Sigma` to be specified. By default, 100 subjects (`subject_sim = 100`) with 50 covariates (`covariates_sim = 50`), and a random tree with 5 leaf nodes (`num_leaf = 5`) are simulated. The function generates six data objects. Namely, the compositional counts (`Y`), covariates (`X`), true regression coefficients (`phi_sim`), true inclusion indicators (`zeta_sim`), the random tree (`tree`), which is a tree object generated by the `ape` package, and the simulated covariance matrix for the covariates (`Sigma`). The default settings generate a tree structure with *L=5* leaves with *(L-1)x2 = 8* total branches. In the following plot, the branches or edges are labeled e1-e8 and the nodes are labeled 1-9. Node 6 is referred to as the root node, nodes 7-9 are internal nodes, and nodes 1-5 are leaf nodes. 
 
 ```{r message = FALSE, echo = FALSE, fig.width = 7, fig.height= 4 }
 tree.model <- data_DTM$tree
@@ -130,10 +126,6 @@ nodelabels( )
 edgelabels(c( "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"))
 ```
 
- 
-
-
-## Identifying covariates associated with multivariate count data
 Using the simulated data, we can run the model to identify which of the branch-by-covariate combinations are significant in the model.
 ```{r, eval = F, include = T }
 model4 <- DTMbvs_R( tree = data_DTM$tree, Y = data_DTM$Y, X = data_DTM$X, aa = 0.1, bb = 0.9)
@@ -148,7 +140,7 @@ The ordering of the branches corresponds to the edges between nodes stored in th
  data_DTM$tree$edge
 ```
 
-Inclusion is determined with the marginal posterior probability of inclusion (MPPI) for each branch-by-covariate inclusion indicator. Using a threshold of *MPPI* $\ge$ *0.50* with a burn-in of *2,500* iterations, we identify 16 associations. By setting 'plotting = TRUE', we obtain a plot of the number of covariates selected at each MCMC iteration and a plot of the MPPI for each branch-by-covariate index.
+Using a threshold of *MPPI* $\ge$ *0.50* with a burn-in of *2,500* iterations, we identify 9 associations. By setting `plotting = TRUE`, we obtain a plot of the number of covariates selected at each MCMC iteration and a plot of the MPPI for each branch-by-covariate index.
 ```{r message=FALSE, fig.width = 7, fig.height= 4  }
 edge_lab <- c( "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8")
 selected4 <- selected_DTM( dtm_obj = model4, threshold = c( 0.5 ), burnin = 2500, plotting = TRUE, edge_lab = edge_lab )
@@ -175,9 +167,8 @@ Comparatively, we see that for this example, the model was able to identify 9/15
  
 # Joint Dirichlet-Multinomial and Linear Regression Model Bayesian Variable Selection   
 
-This section demonstrates how to run the method proposed in *A Bayesian model of microbiome data for simultaneous identification of covariate associations and prediction of phenotypic outcomes* By Koslovsky, MD, Hoffman, KL, Daniels, CR, and Vannucci, M. Breifly this joint model can be used to simultaneously identify clinical covariates associated with microbial composition data and predict a (continuous) phenotypic response using information contained in the compositional data.
-
-# Simulate Data 
+This section demonstrates how to run the method proposed in *A Bayesian model of microbiome data for simultaneous identification of covariate associations and prediction of phenotypic outcomes* by Koslovsky, MD, Hoffman, KL, Daniels, CR, and Vannucci, M. This joint model can be used to simultaneously identify clinical covariates associated with microbial composition data and predict a (continuous) phenotypic response using information contained in the compositional data.
+ 
 To simulate the covariates, compositional data, and continous outcome, run
 ```{r,  include = F  }
 set.seed(1)
@@ -187,8 +178,7 @@ data_DMLM <- simulate_DMLM( rho = 0.3 )
 ```
 
 By default 50 subjects (`subject_sim = 50`) with 50 taxa (`B_sim = 50`) and 50 covariates (`covariates_sim = 50`) are simulated. Of these, 10 covariates (`active_cov = 10`) are associated with the taxa counts, and the first 10 balances are associated with the continous outcome. The covariates are simulated from a normal distribution with covariance structure similar as above. Balances are constructed using sequential binary separation. 
-
-# Run model
+ 
 To run the model, simply imput the data to the `dm_lm_bvs_R()` function.  
 
 ```{r , eval = F, include = T }

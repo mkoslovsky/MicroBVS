@@ -3,7 +3,7 @@
 # Wrapper function for the Rcpp code to initiate with defaults and simulate data if requested
 DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = NULL, phi = NULL, zeta = NULL,
                          sigma2_alpha = sqrt( 10 ), sigma2_phi = sqrt( 10 ), prior = "BB", a = 1, b = 9, 
-                         a_G = log(0.1/0.9), b_G = 0.5, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1,
+                         a_G = log(0.1/0.9), b_G = 0.2, Omega = NULL, G = NULL, v0 = 0.01, v1 = 10, pie = NULL, lambda = 1,
                          warmstart = T, seed = 1 ){
   library(mvtnorm) 
   library(MCMCpack)
@@ -24,7 +24,7 @@ DMbvs_R <- function( iterations = 20000, thin = 10, z = NULL, x = NULL, alpha = 
   # a -  parameter for beta prior for covariate inclusion probability, Default = 1
   # b -  parameter for beta prior for covariate inclusion probability, Default = 9
   # a_G - baseline inclusion parameter for MRF prior, Default = log(0.1/0.9)
-  # b_G - similarity inclusion parameter for MRF prior, Default = 0.5
+  # b_G - similarity inclusion parameter for MRF prior, Default = 0.2
   # Omega - Initial precision matrix
   # G - Graphical structure for known graph
   # v0 - Variance for exclusion of edge, Default = 0.01
