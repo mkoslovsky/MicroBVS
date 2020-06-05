@@ -42,7 +42,7 @@ selected_DM <- function( dm_obj = NULL, threshold = c(0.5), plotting = FALSE, bu
   # Plots of number of selected indices and PPI
   
   if( plotting == TRUE ){
-    plot( 1:len, apply( dmlm_obj[[ 2 ]], 3, sum ), xlab = "Samples", ylab = "Number of selected covariates", lty = 1, type = "l") 
+    plot( 1:len, apply( dm_obj[[ 2 ]], 3, sum ), xlab = "Samples", ylab = "Number of selected covariates", lty = 1, type = "l") 
  
     # Plot zeta PPI
     y <- c( zeta_means )
@@ -52,7 +52,7 @@ selected_DM <- function( dm_obj = NULL, threshold = c(0.5), plotting = FALSE, bu
       ggplot(data, aes(x, y) ) +
         geom_segment(aes(xend = x, yend = 0), size = 1 , lineend = "butt") + 
         labs(x="Covariate Index", 
-             y="PPI") + geom_abline(slope = 0, intercept = threshold, linetype = "dashed"))
+             y="MPPI") + geom_abline(slope = 0, intercept = threshold, linetype = "dashed"))
 
   }
   if( G ){

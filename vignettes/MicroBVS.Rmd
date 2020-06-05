@@ -1,10 +1,13 @@
 ---
 title: "MicroBVS-vignette"
 output: rmarkdown::html_vignette
+author: Matthew D. Koslovsky and Marina Vannucci
 vignette: >
   %\VignetteIndexEntry{MicroBVS-vignette}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -13,188 +16,154 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
+ 
 
-```{r setup, include=FALSE}
-library(RefManageR)
-options(knitr.table.format = 'markdown')
-file.name <- system.file("Bib", "microB.bib", package="RefManageR")
-bib <- ReadBib("/Volumes/Samsung_T5/mkoslovsky_mac/RicePostDoc/Microbiome/Code/DTM/microB.bib")
-BibOptions(style = "markdown", bib.style = "numeric",cite.style = "numeric")
+# Introduction 
+In this vignette, we provide worked examples with code and output on simulated data to demonstrate how to apply the Bayesian variable selection methods for Dirichlet-Multinonmial, Dirichlet-tree Multinomial, and joint modelling approaches referenced in the chapter *Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data* to analyze compositional data in practice. Note that this package also contains a subset of the MOMS-PI data used in our application of the DM model. 
+
+# Dirichlet-Multinomial Bayesian Variable Selection   
+
+## Simulate Data
+Having installed and loaded the `MicroBVS` package into the R environment (See README for instructions), generate a simulated data set for a Dirichlet-Multinomial model using the `simulate_DM()` function. 
+
+```{r setup, message = FALSE, warning = FALSE, results = "hide" }
+library(MicroBVS)
+```
+```{r,  include = F  }
+set.seed(1)
+```
+```{r }
+data_DM <- simulate_DM( rho = 0.3 )
 ```
 
-# Technical details 
-In this vignette, we provide technical details of the underlying method introduced in *DTMbvs: Dirichlet-Tree Multinomial Regression Models with
-Bayesian Variable Selection for Microbiome Data - an R Package*. Additionally, we provide a worked example with code and output on simulated data to demonstrate how to use the software in practice. 
+By default 100 subjects (`n_obs = 100`) with 75 taxa (`n_taxa = 75`) and 30 covariates (`n_vars = 30`) are simulated. The function requires specification of `rho` or `Sigma`, where `rho` sets the covariance matrix between simulated covariates as $\sigma_{ij} = \rho^{|i-j|}$ and `Sigma` is simply a given covariance matrix. Of the $30 \times 75$ potential covariate-taxon associations, $4$ of the covariates are associated with $4$ of the simulated taxa. Additional arguments are available to control to minimum (`beta_min`) and maximum (`beta_max`) true regression coefficients, signal-to-noise ratio (`signoise`), minimum (`n_reads_min`) and maximum (`n_reads_max`) number of taxa reads, and the dispersion factor (`theta0`). 
 
-
-## Multivariate count data
-Let $y_i = (y_{i,1}, \dots, y_{i,K})^{\prime}$ represent a *K*-dimensional vector of count data, $k = 1,\dots, K$, for the $i^{th}$ subject, $i = 1, \dots, n$.
-Let $y_i$ follow a multinomial($\dot{y}_{i}|\psi_i$), where $\dot{y}_{i} = \sum_{k=1}^K y_{i,k}$ and $\psi_i$ is defined on the *K*-dimensional simplex 
-$$S^{K-1} = \{ (\psi_{i,1}, \dots, \psi_{i,K}): \psi_{i,k} \geq 0, \forall k, \sum_{k=1}^K \psi_{i,k} = 1\}.$$
-Often, researchers assume a conjugate Dirichlet($\mathbf{\gamma}_i$) prior for $\psi_i$, where $\mathbf{\gamma}_i = (\gamma_{i,k}>0, \forall k \in K)$ `r Citep(bib, "wadsworth2017integrative", "chen2013variable")`. While this prior accounts for overdispersion in the multivariate count data, it does not take into account known relations between $\psi_{i,k}$. In order to accommodate a tree-like structure among counts, the multinomial distribution is decomposed into the product of multinomial distributions for each of the sub-trees in the tree, and the conjugate Dirichlet-tree prior is applied `r Citep(bib, "dennis1991hyper", "minka1999dirichlet")`. 
-
-Specifically, let tree *T* have *K* leaf nodes and *V* internal nodes. Let $C_v$ represent the set of child nodes for each individual node $v \in V$. For each subject, the branch probability between parent node *v* and child node *c* is represented as $\psi_{i,vc}$, where $\sum_{c = 1}^{|C_v|} \psi_{i,vc} = 1$ and $|C_v|$ is the number of child nodes of *v*. Under this parameterization, we assume that $y_{i,v} = (y_{i,v1}, \dots, y_{i,vC} )^{\prime}$ follows a multinomial($\dot{y}_{i,v}, \psi_{i,v}$), where $\psi_{i,v} = \{ \psi_{i,vc}, c \in C_v \}$. We assume a Dirichlet($\gamma_{i,v}$) prior for each $\psi_{i,v}$, where $\gamma_{i,v} = (\gamma_{i,vc} > 0, \forall c \in C_v)$.
-
-Here we can integrate out the $\psi_{i,v}$ and model $\dot{y}_{i,v}$ with a Dirichlet-multinomial($\gamma_{i,v}$). Then, we can take the product of the *v* Dirichlet-multinomial (DM) models for each sub-tree to obtain the Dirichlet-tree multinomial (DTM) distribution.
-Specifically, the DTM model can be described as 
-$$ \prod_{v \in V} \frac{\Gamma(\sum_{c \in C_v} y_{i,vc} + 1) \Gamma(\sum_{c \in C_v} \gamma_{i,vc})}{\Gamma(\sum_{c \in C_v} y_{i,vc} + \sum_{c \in C_v} \gamma_{i,vc})} \times \prod_{c \in C_v} \frac{\Gamma(y_{i,vc} + \gamma_{i,vc})}{\Gamma(y_{i,vc} + 1)\Gamma(\gamma_{i,vc})},$$
-where $\Gamma$ represents the gamma function. 
-Note that the generalized DM model, as well as the DM model, are special cases of this class of models `r Citep(bib,"minka1999dirichlet","wang2017dirichlet")`. Specifically, the generalized DM model can be represented as a DTM with a binary cascading tree (i.e., at each level of the tree, the right-most branch splits into two), and the DM can be represented with a tree containing only one root node and $K$ leaf nodes. We can incorporate covariate effects into the model using a log-linear regression framework. Specifically, we set $\lambda_{i,vc} = \log(\gamma_{i,vc})$ and assume 
-$$ \lambda_{i,vc} = \alpha_{vc} + \sum_{p=1}^P \varphi_{vcp}x_{i,p},$$
-where $x_i = (x_{i,1},\dots, x_{i,P})^{\prime}$ represents a set of measurements on $P$ covariates and $\mathbf{\varphi}_{vc} = (\varphi_{vc1},\dots,\varphi_{vcP})^{\prime}$. We assume the intercept terms $\alpha_{vc}$ follow a $N(0, \sigma_{vc}^2)$, where $\sigma^2_{vc}$ are set large to impose vague priors on $\alpha_{vc}$.   
-
-## Variable Selection
-
-To reduce the dimensionality of the model and identify covariates that are associated with each branch of the tree, we impose a stochastic search variable selection framework `r Citep(bib, "george1997approaches","brown1998multivariate")`. The covariates' inclusion in the model is characterized by a latent, $\sum_{v \in V}|C_v|$-dimensional inclusion vector $\mathbf{\zeta}$. For branch $b_{vc}$, located between parent node *v* and child node *c*, let $\zeta_{vc}=(\zeta_{vc1},\dots,\zeta_{vcP})^{\prime}$. Under this formulation $\zeta_{vcp}=1$ indicates that covariate *p* is associated with the counts along branch $b_{vc}$ and 0 otherwise. The spike-and-slab prior for $\varphi_{vcp}$ follows a mixture of a normal distribution and a Dirac-delta function at 0,
-$$\varphi_{vcp} \sim \zeta_{vcp}N(0,r_{vc}^2) + (1-\zeta_{vcp})\delta_0(\varphi_{vcp}),$$
-where $r_{vc}^2$ is set large to impose a vague prior for the regression coefficients and $\varphi_{vc} = (\varphi_{vc1},\dots, \varphi_{vcP} )^{\prime}$. 
-
-
-
-
-
-### Prior probability of inclusion for covariates
-
-The prior probability of inclusion for each covariate, $\zeta_{vcp}$, can take various forms, which can incorporate different levels of sparsity into the model and can accommodate relations between covariates. Commonly a beta-binomial distribution is used. With this prior, we assume each $\zeta_{vcp}$ follows a Bernoulli distribution
-$$p(\zeta_{vcp}|\omega_{vcp}) = \omega_{vcp}^{ \zeta_{vcp}}(1-\omega_{vcp})^{1-\zeta_{vcp}},$$
-and further impose a Beta prior on $\omega_{vcp} \sim \mbox{Beta}(a,b)$. By integrating out $\omega_{vcp}$,  we obtain 
-$$p(\zeta_{vcp}) = \frac{\mbox{Beta}(\zeta_{vcp} + a,1 - \zeta_{vcp} + b)}{\mbox{Beta}(a,b)},$$
-where the hyperparameters *a* and *b* can be set to impose various levels of sparsity in the model. In practice, `r Cite(bib, "wadsworth2017integrative")` suggest using a weakly-informative prior probability of inclusion by setting $a + b = 2$, where the prior expected mean value $m = a/(a+b)$. Thus, setting $a = 0.2$ and $b=1.8$ is interpreted as a prior belief that $10\%$ of the covariates will be selected. A non-informative prior is assumed by setting $a=b=1$ (i.e., $m=0.50$). See `r Cite(bib, "wadsworth2017integrative")` for a detailed sensitivity analysis regarding hyperparmeter specification for DM regression models, which may be extended to the general class of DTM regression models. In general, we recommend relying on the function's default settings if the user is unsure of which prior specifications to use. 
-
-Oftentimes researchers are interested in incorporating prior information for the probability of inclusion of a covariate based on known relations with other covariates `r Citep(bib, c("cassese2015bayesian","li2010bayesian","stingo2011incorporating","koslovsky2018using","peterson2016joint"))`. For example, when covariates are chosen as KEGG pathways or gene expression levels, a network of covariate interactions may be known based on biological information `r Citep(bib, "stingo2011incorporating","li2010bayesian")`. This graphical structure is often incorporated into the model using Markov random field (MRF) priors, which are parameterized to increase a covariate's inclusion probability if neighboring covariates in the graph are included. MRF are undirected graphical models for random variables whose distribution follows Markovian properties. 
-
-
-To incorporate this structure into our model, the prior probability of inclusion for each covariate in a branch is set according to the given relations between covariates $\boldsymbol{x}$. Specifically, we place a MRF prior on $\zeta_{vc}$ that increases the probability of inclusion for a covariate if covariates in its neighborhood in the graph are also included.  Given *G*, the adjacency matrix that represents the relations between covariates, the prior probability of inclusion for indicators $\zeta_{vc}$ follows 
-$$p(\zeta_{vc}|G) \propto \exp(a_G\boldsymbol{1}^{\prime}\zeta_{vc} + b_G \zeta_{vc}^{\prime}G\zeta_{vc}),$$ 
-  where $\boldsymbol{1}$ is a $P$-dimensional vector of 1s and $a_G$ and $b_G$ control the global probability of inclusion and the influence of neighbors' inclusion on a covariate's inclusion, respectively. Previous studies have demonstrated how small increments in $b_G$ can drastically increase the number of covariates included in the model `r Citep(bib,c("li2010bayesian","stingo2011incorporating","stingo2010bayesian"))`. Li and Zhang `r Citep(bib,"li2010bayesian")` provide a detailed description of how to select a value for $b_G$. Note that if there is no learned structure within the covariate space, the prior probabilities of inclusion reduce to independent Bernoulli($\exp(a_G)/(1+\exp(a_G))$).
-
-## Determining *G*
-Oftentimes, *G* is set based on known relations between covariates. However in more exploratory scenarios when less is known about relations, the network structure can be learned. Efficient sampling algorithms for learning the structure of high-dimensional data with Gaussian graphical models `r Citep(bib,"wang2015scaling")` have allowed researchers to embed them into Bayesian variable selection models that simultaneously perform variable selection while learning the relations between covariates `r Citep(bib,"peterson2016joint")`. 
-
-Let $X\sim MVN(\boldsymbol{0},\boldsymbol{\Omega})$, where $\boldsymbol{\Omega}=\Sigma^{-1}$ is a $P\times P$ precision matrix. Following `r Citep(bib,"wang2015scaling")`, we assume a hierarchical prior that models conditional dependence between covariates through edge detection in an undirected graph. Let graph *G* contain *P* nodes, corresponding to the set of potential covariates in the model. Let $g_{st} \in \{0,1\}$ represents a latent inclusion indicator for an edge between nodes *s* and *t*, for $s \lt t$. The inclusion of edge $g_{st}$ corresponds to $\omega_{st} \neq 0$, where $\omega_{st}$, $1 \leq t \lt s \leq P$, are the off-diagonal elements of $\boldsymbol{\Omega}$. The prior distribution for $\boldsymbol{\Omega}$ is the product of *P* exponential distributions for diagonal components and $P(P-1)/2$ mixtures of normals for off-diagonal components of the precision matrix. Specifically, 
-
-$$p(\boldsymbol{\Omega}|G,v_0,v_1,\theta) = \{C(G,v_0,v_1,\theta) \}^{-1}\prod_{s \lt t}N(w_{st}|0,v^2_{st})\prod_s \mbox{Exp}\left(w_{ss}|\theta/2\right)I_{\{\boldsymbol{\Omega} \in M^+\}},$$
-  
-  where $C(G,v_0,v_1,\theta)$ is a normalizing constant, $v_0 > 0$ is set small to push $\omega_{st}$ to zero for excluded edges, $v_1 > 0$ is set large to allow $\omega_{st}$ to be freely estimated for included edges, and $I_{\{\boldsymbol{\Omega} \in M^+\}}$ is an indicator function that constrains $\boldsymbol{\Omega}$ to be a symmetric-positive definite matrix. The prior for the edge inclusion indicator $g_{st}$ follows
-$$p(G,v_0,v_1,\theta,\pi) = \{C(v_0,v_1,\theta,\pi) \}^{-1}C(G,v_0,v_1,\theta)\prod_{s \lt t}\left\lbrace \pi^{g_{st}}(1-\pi)^{1-g_{st}} \right\rbrace,$$
-  where $C(v_0,v_1,\theta,\pi)$ is a normalizing constant and $\pi$ represents the prior probability of inclusion for an edge. 
-
-
-## Posterior Inference
-In Bayesian inference, the joint posterior distribution is proportional to the product of the likelihood of the data and the prior distributions for the parameters. Using a beta-binomial prior probability of inclusion, the parameter space is described as $\Phi=\{\mathbf{\alpha}, \mathbf{\varphi}, \mathbf{\zeta}\}$, and the posterior distribution is
-$$p(\Phi|\mathbf{Y}, \mathbf{x})\propto f(\mathbf{Y}|\mathbf{\alpha},\mathbf{\varphi},\mathbf{\zeta},\mathbf{x})p(\mathbf{\alpha})p(\mathbf{\varphi}|\mathbf{\zeta})p(\mathbf{\zeta}).$$
-  Since closed-form solutions are not available, we use Markov chain Monte Carlo to sample from the posterior distribution via a Metropolis-Hastings within Gibbs approach. We use a two-step update approach to sample regression coefficients and inclusion indicators for covariates, following `r Citep( bib, "savitsky2011variable")`.  
-
-### MCMC algorithm
-A generic iteration of our MCMC algorithm is described as follows:
-  
-1. Update each $\alpha_{vc}$ - Metropolis step with random walk proposal from $\alpha_{vc}^{\prime} \sim N(\alpha_{vc},0.50)$. Accept proposal with probability
-$$\min \left\lbrace \frac{f(\boldsymbol{Y}|\boldsymbol{\alpha}^{\prime},\boldsymbol{\varphi},\boldsymbol{\zeta},\mathbf{x})p(\alpha^{\prime}_{vc})}{f(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi},\boldsymbol{\zeta},\mathbf{x})p(\alpha_{vc})},1  \right\rbrace .$$
-
-2. Jointly update a $\zeta_{vcp}$ and $\varphi_{vcp}$ -
-  * *Between-Model Step* - With equal probability, perform an Add/Delete or Swap step.
-
-    If Add/Delete, select a random covariate $\zeta_{vcp}$.
-      * Add: If the covariate is currently excluded ($\zeta_{vcp} = 0$), change it to $\zeta_{vcp}^{\prime} = 1$. Then sample a $\varphi_{vcp}^{\prime} \sim N(\varphi_{vcp},0.50)$. Accept proposal with probability$$\min \left\lbrace \frac{ f(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi}^{\prime},\boldsymbol{\zeta}^{\prime},\mathbf{x})p(\varphi_{vcp}^{\prime}|\zeta_{vcp}^{\prime})p(\zeta_{vc}^{\prime}) }{ f(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi},\boldsymbol{\zeta},\mathbf{x})p(\zeta_{vc}) },1  \right\rbrace.$$
-      * Delete: If the covariate is currently included ($\zeta_{vcp} = 1$),  change it to $\zeta_{vcp}^{\prime} = 0$ and $\varphi_{vcp}^{\prime} = 0$. Accept proposal with probability $$\min \left\lbrace \frac{ f(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi}^{\prime},\boldsymbol{\zeta}^{\prime},\mathbf{x})p(\zeta_{vc}^{\prime}) }{ f(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi},\boldsymbol{\zeta},\mathbf{x})p(\varphi_{vcp}|\zeta_{vcp})p(\zeta_{vc}) },1  \right\rbrace.$$
-
-    If Swap, select a currently excluded and included covariate and simultaneously perform an add and delete step. 
-    
-  * *Within-Model Step* - Propose a $\varphi_{jp}^{\prime}\sim N(\varphi_{jp}, 0.50)$ for each covariate currently selected in the model ($\zeta_{jp}=1$). Accept each proposal with probability 
-$$\min \left\lbrace \frac{ p(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi}^{\prime},\boldsymbol{\zeta},\mathbf{x})p(\varphi_{jp}^{\prime}|\zeta_{jp}) }{ p(\boldsymbol{Y}|\boldsymbol{\alpha},\boldsymbol{\varphi},\boldsymbol{\zeta},\mathbf{x})p(\varphi_{jp}|\zeta_{jp}) },1  \right\rbrace.$$
-To include a known graphical structure and impose a MRF prior for selection, the algorithm simply replaces $p(\zeta)$ with $p(\zeta|G)$. If the relational structure between the covariates is unknown, the posterior distribution of the model is re-defined as 
-                                                                               $$p(\Phi|\mathbf{Y}, \mathbf{X})\propto f(\mathbf{Y}|\mathbf{\alpha},\mathbf{\varphi},\mathbf{\zeta},\mathbf{X})f(\mathbf{X}|\mathbf{\Omega})p(\mathbf{\alpha})p(\mathbf{\Omega}|G)p(\mathbf{\varphi}|\mathbf{\zeta})p(\mathbf{\zeta}|G)p(G),$$
-where $\Phi=\{\mathbf{\alpha}, \mathbf{\varphi}, \mathbf{\zeta} ,\mathbf{\Omega}, G\}$. Note that this parameterization treats the covariates $\mathbf{X}$ as random and not fixed. For implementation, the MCMC algorithm requires two additional steps to simultaneously learn the graphical relations. In our implementation, we update $\boldsymbol{\Omega}$ and $G$ following the approach outlined in `r Citep(bib, "wang2015scaling")`.
-                                                                               
-                          
-# Implementation of DTMbvs  
-The main function in this package, `DTMbvs_R`, serves two primary roles. First, it can be used to generate data following the model described above. Second, it implements the proposed Bayesian variable selection procedure for Dirichlet-tree multinomial regression models. 
-
-## Data
-To generate the data used in this demonstration, run 
-
-```{r message=FALSE,  echo = FALSE}
-library(mvtnorm)
-library(MCMCpack)
-library(Rcpp)
-library(RcppArmadillo)
-library(ape) # For handling phylogenetic tree data
-library(GGMselect)
-library(ggplot2)
-sourceCpp("/Volumes/Samsung_T5/mkoslovsky_mac/RicePostDoc/Microbiome/Code/DTM/DTMbvs/src/DTMbvs_Final.cpp")
-source("/Volumes/Samsung_T5/mkoslovsky_mac/RicePostDoc/Microbiome/Code/DTM/DTMbvs/R/DTMbvs_R.R")
-source("/Volumes/Samsung_T5/mkoslovsky_mac/RicePostDoc/Microbiome/Code/DTM/DTMbvs/R/selected.R")
-source("/Volumes/Samsung_T5/mkoslovsky_mac/RicePostDoc/Microbiome/Code/DTM/DTMbvs/R/bfdr.R")
+```{r,  include = F  }
+data(model1)
+data(model2)
+data(model4)
+data(model5)
 ```
 
+## Run model
+To run the model with a Beta-Binomial prior, simply input the data to the `DMbvs_R()` function and set `prior = "BB"`.  
+
+```{r, eval = F, include = T }
+model1 <-  DMbvs_R( z = data_DM$Y, x = data_DM$X[,-1], prior = "BB",  seed = 1)
+```
+By default, the algorithm is run for $20,000$ iterations, thinning to every $10^{th}$ iteration, and the hyperparameters for the Beta-Binomial prior are $a=1$ and $b=9$. The object `model1` contains a list of the MCMC output for the taxon-specific intercept terms, $\alpha$, the inclusion indicators, $\zeta$, and corresponding regression coefficients, $\varphi$. To extract selected terms from the model, run
+
+```{r, message = FALSE, warning = FALSE, results = "hide" }
+selected1 <-  selected_DM( dm_obj = model1, burnin = 1000, plotting = T)
+```
+
+`selected1` contains a two element list, where the first element is a number of selected covariate-taxon by 2 dimensional matrix where the first (second) column represents the corresponding row (column) in the  $\varphi$ matrix selected. The second element is a matrix of corresponding MPPIs for each covariate-taxon pair. By setting `plotting = T`, a plot of the sum of covariate-taxon pairs active in each MCMC iteration as well as plot of the MPPIs with the provided significance level is generated. 
+
+Next, we demonstrate how to run the DM model when there is an graphical structure underlying the relation between covariates. To simulate these data, we first need to define the graphical structure. Here, we generate a graphical structure similar to our simualtion study. 
+```{r,  include = F  }
+set.seed(1)
+```
+```{r   }
+      Sigma <- matrix(0,30,30)
+      Sigma[1:5,1:5] <- 0.7
+      Sigma[6:10,6:10] <- 0.5
+      Sigma[11:15,11:15] <- 0.3
+      diag(Sigma) <- 1
+      G <- (Sigma != 0 )*1 
+      data_DM_G <- simulate_DM( Sigma = Sigma )
+```
+Assuming the true graphical structure is known, we can run the DM model with a MRF prior with known graphical structure with the following
+```{r eval=FALSE, include = T}
+model2 <-  DMbvs_R( z = data_DM_G$Y, x = data_DM_G$X[,-1], prior = "MRF_fixed", G = G, seed = 1)
+```
+By default, the hyperparameters for the MRF prior are set to $a_G = \log(0.1/0.9)$ and $b_G = 0.5$. Similarly, the `selected_DM()` function can be used to extract the results. If the graphical structure is unknown, simply run 
+```{r, eval = F, include = T  }
+model3 <-  DMbvs_R( z = data_DM_G$Y, x = data_DM_G$X[,-1], prior = "MRF_unknown", b_G = 0.2, seed = 1)
+```
+
+
+The output of `model3` is very similar to `model1` and `model2`, with the exception that it additionally includes MCMC samples for the learned graphical structure. To additionally extract the learned graph, run 
+
+```{r,  include = F  }
+data(selected3)
+```
+
+```{r, eval = F, include = T  }
+selected3 <-  selected_DM( dm_obj = model3, burnin = 1000, plotting = F, G = T)
+```
+The third element in the list `estimated_G`, represents the posterior edge inclusion for the graphical structure. By thresholding, an adjacency matrix can be obtained to plot the corresponding graphical structure using the `igraph` package. 
+
+```{r pressure, echo=FALSE, fig.height=5, fig.width=6, message=FALSE, warning=FALSE  }
+library( igraph )
+graph <- ( selected3$estimated_G > 0.5)*1
+adj <- graph_from_adjacency_matrix( graph , mode = "undirected") 
+
+
+plot( adj,vertex.color="gold", vertex.size=15,  vertex.frame.color="gray", vertex.label.color="black", vertex.label.cex=0.8, vertex.label.dist=2, )
+```
+
+
+In this example, the model was able to identify the stronger relations ($\sigma_{ij} = 0.7$) between covariates, but selected fewer edges with simulated $\sigma_{ij} = 0.3$ or  $\sigma_{ij} = 0.5$. In addition to the data, the true regression coefficients are saved in the `data_DM_G` object.  Comparing these to the output, we see the model performed quite well in this toy example.  
 ```{r message=FALSE}
-DTMbvs_R( eval = FALSE )
+which( data_DM_G$betas[,-1] != 0, arr.ind = T ) 
+selected3$selected_zeta
 ```
 
-By setting `eval = FALSE`, the function simulates data but does not run the variable selection algorithm. The function generates four data objects. Namely, `tree.model`, `Y.model`, `X.model`, and `truth`, which represent the phylogentic tree structure, the *N* $\times$ *L* multivariate count data, the *N* $\times$ *P* matrix of covariates, and a vector of true associations (only created for simulated data), respectively. Here, *N* is the number of subjects, *L* is the number of leaves in the tree, and *P* is the number of covariates. These data are simulated with the default parameters set in the `DTMbvs_R` function (i.e., *100* subjects, a random tree with *5* leaves, *50* covariates from a $N_P(0,\boldsymbol{\Sigma})$ with $\Sigma_{ij} = \rho^{|i-j|}$, $\rho$ *= 0.2*, *3* branches with *5* randomly selected significant covariates). By adjusting these arguments, the user can simulate various data structures. For example,
 
-`DTMbvs_R( subject_sim = 200, num_leaf = 15, covariates_sim = 20, corr = 0.1, num_branch = 2, num_cov = 5, seed = 12, eval = FALSE )`
+# Dirichlet-tree Multinomial Bayesian Variable Selection   
 
-generates *200* subjects, a random tree with *15* leaves, *20* covariates, $\rho$ *= 0.1*, and *2* branches with *5* randomly selected significant covariates using a different random seed. 
+Next, we demonstrate how to run the model on compositional data that follow a tree-like structure. To simulate data, run 
 
-For the remainder of this tutorial, we will use the data simulated using the default parameters. The tree structure simulated for these data has *L=5* leaves with *(L-1)x2 = 8* total branches. In the following plot, the branches or edges are labeled e1-e8 and the nodes are labeled 1-9. Node 6 is referred to as the root node, nodes 7-9 are internal nodes, and nodes 1-5 are leaf nodes. 
+```{r,  include = F  }
+set.seed(1)
+```
+```{r message=FALSE}
+data_DTM <- simulate_DTM( rho = 0.3 )
+```
+Similar to `simulate_DM`, `simulate_DTM` requires `rho` or `Sigma` to be specified. By default, 100 subjects (`subject_sim = 100`) with 50 covariates (`covariates_sim = 50`), and a random tree with 5 leaf nodes (`num_leaf = 5`) are simulated. The function generates six data objects. Namely, the compositional counts `Y`, covariates `X`, true regression coefficients `phi_sim`, true inclusion indicators `zeta_sim`, the random tree `tree`, which is a tree object generated by the `ape` package, and the simulated covariance matrix for the covariates, `Sigma`. These default settings generate a tree structure with *L=5* leaves with *(L-1)x2 = 8* total branches. In the following plot, the branches or edges are labeled e1-e8 and the nodes are labeled 1-9. Node 6 is referred to as the root node, nodes 7-9 are internal nodes, and nodes 1-5 are leaf nodes. 
 
 ```{r message = FALSE, echo = FALSE, fig.width = 7, fig.height= 4 }
+tree.model <- data_DTM$tree
 tree.model$tip.label <- c(1,2,3,4,5)
 plot( tree.model,use.edge.length = FALSE  )
 nodelabels( )
 edgelabels(c( "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"))
 ```
 
-The columns in `Y.model` correspond to the count data associated with the leaf nodes, in order.
-```{r message = FALSE}
-head( Y.model )
-```
-The tree used in this example is generated using the `rtree()` function from the `ape` package. The tree used in the example can be recreated using Newick format following, 
-```{r  }
-DTM <- "micro( ( 1, 2 ), ( 3, ( 4, 5 ) ) );"
-cat( DTM, file = "dtm.tre", sep = "\n" )
-tree_DTM <- read.tree( "dtm.tre" )
-```
-Now, `tree_DTM` contains the tree information necessary for the model to run. As noted, the Dirichlet-multinomial model is a special case of the Dirichlet-tree multinomial model. By adjusting the tree structure to one root node with *L* branches, we assume a Dirichlet-multinomial model. Using the same approach, we can generate the tree for a Dirichlet-multinomial model.
-```{r  }
-DM <- "micro( 1, 2, 3, 4, 5 );"
-cat( DM, file = "dm.tre", sep = "\n" )
-tree_DM <- read.tree( "dm.tre" )
-```
+ 
 
 
 ## Identifying covariates associated with multivariate count data
 Using the simulated data, we can run the model to identify which of the branch-by-covariate combinations are significant in the model.
-```{r message=FALSE, results = "hide"}
-test <- DTMbvs_R( tree = tree.model, Y = Y.model, X = X.model, aa = 0.1, bb = 0.9)
+```{r, eval = F, include = T }
+model4 <- DTMbvs_R( tree = data_DTM$tree, Y = data_DTM$Y, X = data_DTM$X, aa = 0.1, bb = 0.9)
 ```
 ```{r message=FALSE }
-str(test)
+str(model4)
 ```
-The results object, `test`, is a *3*-element list of the $s = 1, \dots, S$ MCMC samples for the $\sum_{v \in V} |C_v|$ branch-specific intercept terms $\alpha_{vc}$, $\sum_{v \in V} |C_v|$ $\times$ *P* branch-by-covariate inclusion indicators $\zeta_{vcp}$, and their respective regression coefficients $\varphi_{vcp}$. Note that by default, there are *S = 5,000* MCMC samples, since the total *50,000* iterations of the MCMC chain were thinned by every *10*$^{th}$ iteration. Here, we place a weakly-informative prior for each branch-by-covariate inclusion indicator. Specifically, we set the model to use a beta-binomial prior for inclusion probabilities with hyperparameters $a=0.1$ and $b=0.9$.
+The results object, `model4`, is a *3*-element list of the $s = 1, \dots, S$ MCMC samples for the $\sum_{v \in V} |C_v|$ branch-specific intercept terms $\alpha_{vc}$, $\sum_{v \in V} |C_v|$ $\times$ *P* branch-by-covariate inclusion indicators $\zeta_{vcp}$, and their respective regression coefficients $\varphi_{vcp}$. Note that by default, there are *S = 5,000* MCMC samples, since the total *50,000* iterations of the MCMC chain were thinned by every *10*$^{th}$ iteration. Here, we place a weakly-informative prior for each branch-by-covariate inclusion indicator. Specifically, we set the model to use a beta-binomial prior for inclusion probabilities with hyperparameters $a=0.1$ and $b=0.9$.
 
 The ordering of the branches corresponds to the edges between nodes stored in the tree object, as defined by the `ape` package. For example, branch 1 corresponds to the edge between node 6 and 7. 
 ```{r message = FALSE }
- tree.model$edge
+ data_DTM$tree$edge
 ```
 
 Inclusion is determined with the marginal posterior probability of inclusion (MPPI) for each branch-by-covariate inclusion indicator. Using a threshold of *MPPI* $\ge$ *0.50* with a burn-in of *2,500* iterations, we identify 16 associations. By setting 'plotting = TRUE', we obtain a plot of the number of covariates selected at each MCMC iteration and a plot of the MPPI for each branch-by-covariate index.
 ```{r message=FALSE, fig.width = 7, fig.height= 4  }
 edge_lab <- c( "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8")
-selections <- selected( dtm_obj = test, threshold = c( 0.5 ), burnin = 2500, plotting = TRUE, edge_lab = edge_lab )
+selected4 <- selected_DTM( dtm_obj = model4, threshold = c( 0.5 ), burnin = 2500, plotting = TRUE, edge_lab = edge_lab )
 ```
 
 ```{r echo = FALSE, results = 'asis' }
 library(knitr)
-kable(selections$selected_name, align = 'c')
+kable(selected4$selected_name, align = 'c')
 ```
 
 The true branch-by-covariates in this model are
 
 ```{r echo = FALSE, results = 'asis' }
-covariate_list <- floor( ( truth - 1 )/8 ) + 1
-branch_list <- ( truth - 1 ) %% 8 + 1
+covariate_list <- floor( ( which( data_DTM$zeta_sim != 0 ) - 1 )/8 ) + 1
+branch_list <- ( which( data_DTM$zeta_sim != 0 ) - 1 ) %% 8 + 1
 edge_lab <- c( "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8")
 cov_lab <- seq(1:50)
 R <- cbind( edge_lab[ branch_list ], cov_lab[ covariate_list ] )
@@ -202,54 +171,48 @@ colnames(R) <- c( "Branch", "Covariate" )
 kable( R, align = "c") 
 ```
 
-Comparatively, we see that for this example, the model was able to identify 14/15 of the true associations with two false positives. Note that simply running `DTMbvs_R()` would have simulated the same data and obtained the same results. In this situation, the user would be prompted with the following: `"Tree, count, or covariate matrix is missing. Results will be based on simulated data. Proceed (Y/N)?"` before running.
+Comparatively, we see that for this example, the model was able to identify 9/15 of the true associations with no false positives.  
+ 
+# Joint Dirichlet-Multinomial and Linear Regression Model Bayesian Variable Selection   
 
-### Prior specification
-By default, the model used a non-informative ($a=b=1$) beta-binomial prior for inclusion indicators. The graph-based priors introduced in the Technical Details can be implemented by setting the argument `prior = "MRF_fixed"` or `prior = "MRF_unknown"`. In both of these model formulations, the default hyperparameters $a_G$ and $b_G$ are set to *log(0.1/0.9)* and *0.5*, respectively. When using a MRF prior with a known graphical structure, $G$ must be specified by the user. In this example, we impose a graphical structure between the first 10 covariates.
-```{r message=FALSE, results = "hide"}
-G_example <- matrix( 0, 50 ,50 )
-G_example[ 1:10, 1:10 ] <- 1
-diag( G_example ) <- 0 
-test_G <- DTMbvs_R( iterations = 50000, tree = tree.model, Y = Y.model, X = X.model, prior = "MRF_fixed", G = G_example )
+This section demonstrates how to run the method proposed in *A Bayesian model of microbiome data for simultaneous identification of covariate associations and prediction of phenotypic outcomes* By Koslovsky, MD, Hoffman, KL, Daniels, CR, and Vannucci, M. Breifly this joint model can be used to simultaneously identify clinical covariates associated with microbial composition data and predict a (continuous) phenotypic response using information contained in the compositional data.
+
+# Simulate Data 
+To simulate the covariates, compositional data, and continous outcome, run
+```{r,  include = F  }
+set.seed(1)
+```
+```{r }
+data_DMLM <- simulate_DMLM( rho = 0.3 )
 ```
 
-Here, the selected branch-by-covariate effects are
+By default 50 subjects (`subject_sim = 50`) with 50 taxa (`B_sim = 50`) and 50 covariates (`covariates_sim = 50`) are simulated. Of these, 10 covariates (`active_cov = 10`) are associated with the taxa counts, and the first 10 balances are associated with the continous outcome. The covariates are simulated from a normal distribution with covariance structure similar as above. Balances are constructed using sequential binary separation. 
 
-```{r message=FALSE, fig.width = 7, fig.height= 4  }
-selections_G <- selected( dtm_obj = test_G, threshold = c( 0.5 ), burnin = 2500, plotting = TRUE, edge_lab = edge_lab )
+# Run model
+To run the model, simply imput the data to the `dm_lm_bvs_R()` function.  
+
+```{r , eval = F, include = T }
+model5 <- dm_lm_bvs_R( y = data_DMLM$Y, z = data_DMLM$Z, x = data_DMLM$X, seed = 1 )
+```
+By default, the algorithm is run for 10,000 iterations, thinning to every 10$^{th}$ iteration. The prior probabilities of inclusion for covariates and balances are both 10%. See the R documentation for various options involving the default parameterization. The `model5` object contains a list (in order) of the MCMC samples for $\alpha$, $\zeta$, $\varphi$, $\psi$, $\xi$, $\Omega$, and $G$ following the notation used in the main manuscript. Using the `selected_DMLM()` function, the user can extract the selected covariates and balances in the model. By default, the threshold for active terms is 0.5. For example, 
+```{r }
+selected5 <- selected_DMLM( model5, burnin = 500 )
 ```
 
-```{r echo = FALSE, results = 'asis' }
-library(knitr)
-kable(selections_G$selected_name, align = 'c')
+The `selected5` object contains the selected covariates and balances, as well as the marginal posterior probabilities of inclusion (MPPI) for all of the terms. We can see that the model does a good job recovering the active terms in this example:
+```{r }
+# Selected covariate-taxon relations
+selected5$selected_zeta
+# True covariate-taxon relations
+data_DMLM$true_cov
+# Selected balances (First 10 active in true model)
+selected5$selected_xi
+```
+
+For inference, the `selected_DMLM()` function can be used to generate plots of the MPPIs for both levels of the model as well as plots for the number of terms active in the model at each MCMC iteration. The latter can be used to help assess convergence of the model. To obtain these plots, simply run 
+
+```{r}
+selected5 <- selected_DMLM( model5, burnin = 500, plotting = TRUE )
 ```
 
 
-### Initialization
-By default, the MCMC algorithm starts with an empty set of  branch-by-covariate indicators, and the $\alpha$ intercept terms are simulated from a normal distribution with mean 0 and variance 1. The algorithm can also be initiated with a warmstart by setting `warmstart = TRUE` in the `DTMbvs_R()` function. This command initiates the model following a modified version of the R package accompanying `r Cite(bib, "wadsworth2017integrative")`. Here, $\varphi$ is initiated with the Spearman's correlation coefficient between each covariate and the relative abundance of each branch. Initial $\zeta$ values are set to one if the association between their respective covariate and relative abundance are significant using a Bayesian false discovery rate of 0.20. Using the warmstart, initial $\alpha$ values are set to the standardized log of the sum of the counts in each branch. When using a MRF prior with an unknown graphical structure, $\Omega$ is initiated with a diagonal matrix of ones and $G$ is set to a zero matrix. Additionally, the initial values of all the parameters in the model can be set by the user.
-
-### Inclusion threshold
-In all of these examples, we have used a threshold of *0.50* for the MPPI to determine inclusion. Our package also provides functionality to use a Bayesian false discovery rate (BFDR) threshold which controls for multiplicity. In the example using a beta-binomial prior, a BFDR of 0.10 threshold would result in the following.
-
-```{r message=FALSE }
-bfdr_threshold <- bfdr( selections$mppi_zeta )$threshold
-bfdr_threshold
-bfdr_selected <- selected( test, burnin = 2500, threshold = bfdr_threshold, edge_lab = edge_lab)
-
-```
-```{r echo = FALSE, results = 'asis' }
-library(knitr)
-kable(bfdr_selected$selected_name, align = 'c')
-```
-
-### Dirichlet-multinomial model
-Additionally, this package contains functions to perform variable selection for Dirichlet-multinomial regression models, a special case of the Dirichlet-tree multinomial model in which the number of branches equals the number of leaves in the tree. The methods and functions previously developed by `r Cite(bib, "wadsworth2017integrative")` are incorporated into this package. As mentioned in the main manuscript, we recommend using this model for data sets with more than 100 compositional components. Using the `simulate_DM()` function, users can simulate data following a Dirichlet-multinomial regression model with user specified numbers of observations, taxa leaves, and regression coefficients. To identify covariates associated with each branch, use the `DMbvs_R()` function. By default, the function runs for *5,000* iterations, thinning by every *10*$^{th}$ iteration. Initial values for the $L$ - dimensional vector of intercept terms, $\boldsymbol{\alpha}$, and $P \times L$ - dimensional vector of regression coefficients $\boldsymbol{\beta}$ can be set by the user, set to default ($\boldsymbol{\alpha}_{init} = \boldsymbol{\beta}_{init} = 0$), or warmstarted (`warmstart = TRUE`), similar as above. The prior variance for both $\boldsymbol{\alpha}$ and $\boldsymbol{\beta}$ can be controlled via `sigma2_alpha` and `sigma2_beta`, respectively. The prior probability of inclusion hyperparamters for the beta-binomial distribution are set to `aa = 0.1` and `bb = 1.9` by default. There are two options for the MCMC algorithm, `MCMC = Gibbs` and `MCMC = SSVS`. The `SSVS` version is much faster per each iteration, but may require more iterations for convergance compared to the `Gibbs` algorithm. The output of this function contains the MCMC iterations for $\boldsymbol{\alpha}$ and $\boldsymbol{\beta}$, which can be processed using the `selectedDM()`, similar to the `selected()` function above. 
-
-
-# Conclusion
-This vignette demonstrates how to perform Bayesian variable selection for Dirichlet-tree multinomial regression models. The package accommodates Dirichlet-multinomial regression as a special case and is flexible to various inclusion priors. Additionally, we provide additional functionality for simulating data and performing posterior inference. We welcome any comments that will improve upon the existing package and tutorial. 
-
-# References
-```{r echo = FALSE, results = 'asis' }
-PrintBibliography(bib)
-```
