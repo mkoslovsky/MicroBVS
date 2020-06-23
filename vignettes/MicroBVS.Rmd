@@ -17,9 +17,8 @@ knitr::opts_chunk$set(
 )
 ```
  
-
 # Introduction 
-In this vignette, we provide worked examples on simulated data to demonstrate how to apply the Bayesian variable selection methods for compositional data referenced in the chapter *Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data*. Note that this package also contains a subset of the MOMS-PI data used in our application of the DM model. 
+In this vignette, we provide worked examples on simulated data to demonstrate how to apply the Bayesian variable selection methods for compositional data referenced in the paper *MicroBVS: Dirichlet-Tree Multinomial Regression Models with Bayesian Variable Selection - an R Package*. Note that this package also contains a subset of the MOMS-PI data used in our application of the DM model. 
 
 # Dirichlet-Multinomial Bayesian Variable Selection   
  
