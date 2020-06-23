@@ -1,6 +1,6 @@
-In this folder you'll find code for the R package MicroBVS for the book chapter:
+In this folder you'll find code for the R package MicroBVS found in :
 
-“Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data”, by MD Koslovsky and M Vannucci 
+“MicroBVS: Dirichlet-Tree Multinomial Regression Models with Bayesian Variable Selection - an R Package”, by MD Koslovsky and M Vannucci 
 
 The main functions operate in C++ via the R package Rcpp. These functions can be sourced by a set of wrapper functions that enable easy implementation of the code in the R environment. Various functions are available that produce, summarize, and plot the results for inference.  
 
