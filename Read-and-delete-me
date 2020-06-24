@@ -14,7 +14,7 @@ devtools
 ape
 igraph
 
-Then to install the DMLMbvs package, simply run 
+Then to install the MicroBVS package, simply run 
 
 library(devtools)
 install_github( "mkoslovsky/MicroBVS", build_vignettes = TRUE)
