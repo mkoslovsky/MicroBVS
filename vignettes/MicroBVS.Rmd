@@ -8,6 +8,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
+csl: biomed-central.csl
 references:
 - id: wadsworth2017integrative
   title: An integrative Bayesian Dirichlet-multinomial regression model for the analysis of taxonomic abundances in microbiome data
