@@ -34,7 +34,7 @@ references:
     year: 2017 
     
 - id: Koslovsky2020aoas
-  title: Bayesian model of microbiome data for simultaneous identification of covariate associations and prediction of phenotypic outcomes
+  title: A Bayesian model of microbiome data for simultaneous identification of covariate associations and prediction of phenotypic outcomes
   author:
   - family: Koslovsky
     given: Matthew D
