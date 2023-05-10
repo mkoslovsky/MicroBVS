@@ -33,3 +33,7 @@ log_zeta_pj_cpp <- function(t_pj, a, b) {
     .Call(`_MicroBVS_log_zeta_pj_cpp`, t_pj, a, b)
 }
 
+dm_lm_mediation <- function(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma_alpha, sigma_beta, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m) {
+    .Call(`_MicroBVS_dm_lm_mediation`, iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma_alpha, sigma_beta, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m)
+}
+
