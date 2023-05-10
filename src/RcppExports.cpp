@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // dm_lm_bvs
 List dm_lm_bvs(int iterations, int thin, arma::mat alpha, arma::vec y, arma::mat z, arma::mat x, arma::cube phi, arma::cube psi, arma::mat temp_cc, arma::vec temp_uu, double sigma2_alpha, arma::cube zeta, arma::mat xi, double sigma2_phi, double a, double b, double a_0, double b_0, double h_alpha, double h_beta, double a_m, double b_m, String prior, arma::cube Omega, arma::cube G, arma::cube Var, arma::mat S, double v0, double v1, double a_G, double b_G, double pie, double lambda);
 RcppExport SEXP _MicroBVS_dm_lm_bvs(SEXP iterationsSEXP, SEXP thinSEXP, SEXP alphaSEXP, SEXP ySEXP, SEXP zSEXP, SEXP xSEXP, SEXP phiSEXP, SEXP psiSEXP, SEXP temp_ccSEXP, SEXP temp_uuSEXP, SEXP sigma2_alphaSEXP, SEXP zetaSEXP, SEXP xiSEXP, SEXP sigma2_phiSEXP, SEXP aSEXP, SEXP bSEXP, SEXP a_0SEXP, SEXP b_0SEXP, SEXP h_alphaSEXP, SEXP h_betaSEXP, SEXP a_mSEXP, SEXP b_mSEXP, SEXP priorSEXP, SEXP OmegaSEXP, SEXP GSEXP, SEXP VarSEXP, SEXP SSEXP, SEXP v0SEXP, SEXP v1SEXP, SEXP a_GSEXP, SEXP b_GSEXP, SEXP pieSEXP, SEXP lambdaSEXP) {
@@ -209,6 +214,41 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dm_lm_mediation
+List dm_lm_mediation(int iterations, int thin, arma::mat alpha, arma::vec y, arma::mat z, arma::mat x, arma::cube phi, arma::cube psi, arma::mat temp_cc, arma::vec temp_uu, arma::vec sigma2, double sigma_alpha, double sigma_beta, arma::cube zeta, arma::mat xi, arma::mat beta, double sigma2_phi, double a, double b, double a_0, double b_0, double h_alpha, double h_beta, double a_m, double b_m);
+RcppExport SEXP _MicroBVS_dm_lm_mediation(SEXP iterationsSEXP, SEXP thinSEXP, SEXP alphaSEXP, SEXP ySEXP, SEXP zSEXP, SEXP xSEXP, SEXP phiSEXP, SEXP psiSEXP, SEXP temp_ccSEXP, SEXP temp_uuSEXP, SEXP sigma2SEXP, SEXP sigma_alphaSEXP, SEXP sigma_betaSEXP, SEXP zetaSEXP, SEXP xiSEXP, SEXP betaSEXP, SEXP sigma2_phiSEXP, SEXP aSEXP, SEXP bSEXP, SEXP a_0SEXP, SEXP b_0SEXP, SEXP h_alphaSEXP, SEXP h_betaSEXP, SEXP a_mSEXP, SEXP b_mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
+    Rcpp::traits::input_parameter< int >::type thin(thinSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type z(zSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type phi(phiSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type psi(psiSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type temp_cc(temp_ccSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type temp_uu(temp_uuSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_alpha(sigma_alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma_beta(sigma_betaSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type zeta(zetaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type xi(xiSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2_phi(sigma2_phiSEXP);
+    Rcpp::traits::input_parameter< double >::type a(aSEXP);
+    Rcpp::traits::input_parameter< double >::type b(bSEXP);
+    Rcpp::traits::input_parameter< double >::type a_0(a_0SEXP);
+    Rcpp::traits::input_parameter< double >::type b_0(b_0SEXP);
+    Rcpp::traits::input_parameter< double >::type h_alpha(h_alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type h_beta(h_betaSEXP);
+    Rcpp::traits::input_parameter< double >::type a_m(a_mSEXP);
+    Rcpp::traits::input_parameter< double >::type b_m(b_mSEXP);
+    rcpp_result_gen = Rcpp::wrap(dm_lm_mediation(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma_alpha, sigma_beta, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_MicroBVS_dm_lm_bvs", (DL_FUNC) &_MicroBVS_dm_lm_bvs, 33},
@@ -219,6 +259,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MicroBVS_log_post", (DL_FUNC) &_MicroBVS_log_post, 19},
     {"_MicroBVS_loo_prep", (DL_FUNC) &_MicroBVS_loo_prep, 7},
     {"_MicroBVS_log_zeta_pj_cpp", (DL_FUNC) &_MicroBVS_log_zeta_pj_cpp, 3},
+    {"_MicroBVS_dm_lm_mediation", (DL_FUNC) &_MicroBVS_dm_lm_mediation, 25},
     {NULL, NULL, 0}
 };
 

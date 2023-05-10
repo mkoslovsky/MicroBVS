@@ -1688,6 +1688,268 @@ List within_phi_update_tree_cpp(
   return phi_return;
 }
 
+//Changed
+List between_step_beta( 
+    arma::vec y, 
+    arma::vec temp_beta, 
+    double sigma_beta, 
+    arma::vec temp_xi, 
+    arma::mat x, 
+    arma::mat psi,
+    double temp_sigma2,
+    double a, 
+    double b,
+    double a_0,
+    double b_0)
+{
+  int obs = y.size();       
+  int S = temp_beta.size();          
+  
+  arma::vec one_vec( obs );
+  for( int i = 0; i < obs; ++i ){
+    one_vec[ i ] = 1;
+  }
+  
+  arma::mat current_balance = help::ilr_fun_cpp( psi );   
+  current_balance = arma::join_rows( x, current_balance );   
+  current_balance = arma::join_rows( one_vec, current_balance );   
+  
+  // Randomly select a selectable fixed effect 
+  int s = help::sample_cpp( help::myseq( 1, S - 1 ) );
+  
+  // Set proposals to current 
+  arma::vec beta_proposal( S );
+  arma::vec xi_proposal( S );
+  beta_proposal = temp_beta;
+  xi_proposal = temp_xi;
+  int N = y.size();
+  arma::mat I_y = eye( N, N );
+  arma::mat Var = sigma_beta*eye( S, S );  
+  
+  // Add
+  if( temp_xi[ s ] == 0 ){
+    
+    // Update proposal ( Normal(current_beta, 1)  )
+    double beta_prop = temp_beta[ s ] + sqrt( 1 )*rnorm( 1 )[ 0 ];
+    beta_proposal[ s ] = beta_prop;
+    
+    // Calculate likelihood ratio for current and proposed  (normal since sigma2 is not integrated)
+    double log_like_prop = 0;
+    double log_like_curr = 0;  
+    
+    for( int i = 0; i < N; ++i ){ 
+      double mean_1_prop = ( y[i] - current_balance.row( i )*beta_proposal )[0];    
+      double inside_y_prop = pow( mean_1_prop, 2 )*pow( b_0/a_0, -1 ); 
+      log_like_prop += - (  a_0 + 1/2 )*log( 1 +  1/(2*a_0 )*inside_y_prop ); 
+      
+      double mean_1_curr = ( y[i] - current_balance.row( i )*temp_beta )[0];    
+      double inside_y_curr = pow( mean_1_curr, 2 )*pow( b_0/a_0, -1 ); 
+      log_like_curr += - (  a_0 + 1/2 )*log( 1 +  1/(2*a_0 )*inside_y_curr );   
+    }
+    
+    // Only need the single beta since everything else cancels (log_phi_pj_cpp)
+    double r = ( log_like_prop +  help::log_phi_pj_cpp( beta_prop, sigma_beta ) + help::log_zeta_pj_cpp( 1, a, b )) - 
+      ( log_like_curr + help::log_zeta_pj_cpp( 0, a, b ));
+    
+    // Calculate acceptance probability
+    double a  = log( runif( 1 )[ 0 ] );
+    
+    // Determine acceptance
+    if( a < r ){
+      temp_beta[ s ] = beta_proposal[ s ];
+      temp_xi[ s ] = 1;
+    }
+    
+  }else{
+    
+    // Delete  
+    
+    // Update proposal 
+    double beta_prop = 0;
+    beta_proposal[ s ] = beta_prop;
+    
+    // Calculate likelihood ratio for current and proposed 
+    double log_like_prop = 0;
+    double log_like_curr = 0;  
+    
+    for( int i = 0; i < N; ++i ){ 
+      double mean_1_prop = ( y[i] - current_balance.row( i )*beta_proposal )[0];    
+      double inside_y_prop = pow( mean_1_prop, 2 )*pow( b_0/a_0, -1 ); 
+      log_like_prop += - (  a_0 + 1/2 )*log( 1 +  1/(2*a_0 )*inside_y_prop ); 
+      
+      double mean_1_curr = ( y[i] - current_balance.row( i )*temp_beta )[0];    
+      double inside_y_curr = pow( mean_1_curr, 2 )*pow( b_0/a_0, -1 ); 
+      log_like_curr += - (  a_0 + 1/2 )*log( 1 +  1/(2*a_0 )*inside_y_curr );   
+    } 
+    
+    double r = ( log_like_prop + help::log_zeta_pj_cpp( 0, a, b )) - 
+      ( log_like_curr + help::log_phi_pj_cpp( temp_beta[ s ], sigma_beta ) + help::log_zeta_pj_cpp( 1, a, b ));
+    
+    // Calculate acceptance probability
+    double a  = log( runif( 1 )[ 0 ] );
+    
+    // Determine acceptance
+    if( a < r ){
+      temp_beta[ s ] = 0;
+      temp_xi[ s ] = 0;
+    }
+  }
+  
+  List between_beta( 2 );
+  between_beta[ 0 ] = temp_beta;
+  between_beta[ 1 ] = temp_xi;
+  return between_beta;
+}
+
+
+// Function :: Update beta Within 
+arma::vec within_beta( arma::vec y,  
+                       arma::vec temp_beta,  
+                       double t2_temp,   
+                       arma::vec v_temp,    
+                       arma::mat x,  
+                       arma::mat psi,
+                       double a_0,
+                       double b_0)   
+{
+  
+  int obs = y.size();          
+  int S = temp_beta.size();           
+  
+  arma::vec one_vec( obs );
+  for( int i = 0; i < obs; ++i ){
+    one_vec[ i ] = 1;
+  }
+  
+  arma::mat current_balance = help::ilr_fun_cpp( psi );   
+  current_balance = arma::join_rows( x, current_balance );  
+  current_balance = arma::join_rows( one_vec, current_balance );   
+  
+  arma::mat beta_update( 1, S );    
+  beta_update.zeros();
+  
+  // Make sX and reduce based on v_temp and T2_v matrix  
+  arma:: mat sX = current_balance;    
+  int v_dim = 0;                      
+  v_dim = sum( v_temp );              
+  arma::mat sX_v(obs, v_dim);        
+  arma::mat T2_v( v_dim, v_dim );   
+  sX_v.zeros();
+  T2_v.zeros();
+  
+  int count_v = 0; 
+  for( int s = 0; s < S; ++s){
+    if( v_temp[ s ] == 1 ){
+      sX_v.col( count_v ) = sX.col( s );
+      T2_v( count_v, count_v) = 1/t2_temp;
+      count_v += 1; 
+    }
+  }
+  
+  // Make V_xi and mu_xi 
+  arma::mat Sigma_beta( v_dim, v_dim );    
+  arma::mat mu_beta( v_dim, 1 );        
+  Sigma_beta.zeros(); 
+  mu_beta.zeros(); 
+  
+  // Calculate MVT parameters
+  double a_tilde = 0;
+  arma::vec b_tilde( 1 );
+  b_tilde.zeros();   
+  
+  a_tilde = 2*( a_0 + obs/2 );
+  
+  Sigma_beta = inv_sympd( T2_v + sX_v.t()*sX_v ) ;
+  
+  mu_beta = Sigma_beta*sX_v.t()*( y );
+  
+  b_tilde = b_0 + 0.5*( y.t()*y  - mu_beta.t()*inv_sympd( Sigma_beta )*mu_beta );
+  
+  arma::vec O_vec( v_dim );
+  O_vec.zeros();
+  
+  arma::vec W_sim = help::mvrnormArma( 1, O_vec , (b_tilde/a_tilde)[0]*Sigma_beta ).t();
+  
+  NumericVector chi = rchisq( 1, a_tilde );
+  
+  arma::vec beta_xi_update = mu_beta + W_sim*sqrt( a_tilde/chi[ 0 ] );   
+  
+  // Re-index the beta updates appropriately  
+  count_v = 0; 
+  for( int s = 0; s < S; ++s){
+    if( v_temp[ s ] == 1 ){
+      beta_update[ s ] = beta_xi_update[ count_v ];
+      count_v += 1; 
+    }
+  }
+  
+  return beta_update.t();
+}  
+
+
+arma::vec update_sigma2(   arma::mat y,   
+                           arma::mat x, //10
+                           arma::mat psi,
+                           double sigma_beta,
+                           arma::vec xi_temp,
+                           double a_0,
+                           double b_0
+){  
+  int obs = y.size();        
+  int S = psi.n_cols - 1 + x.n_cols + 1;   
+  
+  arma::vec one_vec( obs );
+  for( int i = 0; i < obs; ++i ){
+    one_vec[ i ] = 1;
+  }
+  
+  arma::mat current_balance = help::ilr_fun_cpp( psi );  
+  current_balance = arma::join_rows( x, current_balance );   
+  current_balance = arma::join_rows( one_vec, current_balance );   
+  
+  int  xi_dim = sum( xi_temp );              
+  arma::mat X_xi(obs, xi_dim);        
+  arma::mat T_beta_xi( xi_dim, xi_dim );    
+  X_xi.zeros();
+  T_beta_xi.zeros();
+  
+  int count_xi = 0; 
+  for( int s = 0; s < S; ++s){
+    if( xi_temp[ s ] == 1 ){
+      X_xi.col( count_xi ) = current_balance.col( s );
+      T_beta_xi( count_xi, count_xi) = 1/sigma_beta;
+      count_xi += 1; 
+    }
+  }
+  
+  
+  arma::vec sigma2_update( 1 );
+  sigma2_update.zeros();
+  
+  // Calculate hyperparameters
+  double a_tilde = 0;
+  arma::vec b_tilde( 1 );
+  b_tilde.zeros();
+  
+  arma::vec mu_sigma2( 1 );
+  mu_sigma2.zeros();
+  arma::mat sigma_sigma2( 1, 1 );
+  sigma_sigma2.zeros(); 
+  
+  a_tilde = a_0 + obs/2;
+  
+  sigma_sigma2 = inv_sympd( X_xi.t()*X_xi + T_beta_xi ) ;
+  
+  mu_sigma2 = sigma_sigma2 * X_xi.t() *y ;
+  
+  b_tilde = b_0 + 0.5*( y.t() * y - mu_sigma2.t()*inv_sympd( sigma_sigma2 )*mu_sigma2 );
+  
+  sigma2_update[ 0 ] = 1/rgamma(1, a_tilde, 1/b_tilde[ 0 ] )[ 0 ];
+  
+  return sigma2_update;
+}
+
+
 } // For namespace 'help'
 
 // Function :: MCMC algorithm
@@ -2319,3 +2581,134 @@ double log_zeta_pj_cpp( double t_pj, double a, double b
   return log_zeta_pj ;
 }
 
+// Function :: MCMC algorithm 
+// [[Rcpp::export]]
+List dm_lm_mediation(
+    int iterations,
+    int thin,
+    arma::mat alpha,
+    arma::vec y,
+    arma::mat z,
+    arma::mat x,
+    arma::cube phi,
+    arma::cube psi,
+    arma::mat temp_cc,
+    arma::vec temp_uu, 
+    arma::vec sigma2,
+    double sigma_alpha,
+    double sigma_beta,
+    arma::cube zeta,
+    arma::mat xi,
+    arma::mat beta,
+    double sigma2_phi,
+    double a, // Beta-Bin
+    double b, // Beta-Bin
+    double a_0, // Inverse-Gamma
+    double b_0, // Inverse-Gamma
+    double h_alpha,
+    double h_beta, 
+    double a_m,
+    double b_m){
+  
+  // Initiate memory
+  List between_phi_zeta( 3 );
+  List alpha_out( 2 );
+  List phi_out( 2 );
+  List between_xi_beta( 2 );
+  int B = alpha.n_rows;   
+  int P = zeta.n_cols;  
+  int N = y.n_rows;     
+  arma::vec temp_alpha( B );
+  arma::mat temp_zeta( B, P ); 
+  arma::mat temp_phi( B, P );
+  arma::mat temp_psi( N, B );
+  arma::vec temp_xi( B + P );
+  arma::vec temp_beta( B + P );  
+  
+  temp_alpha = alpha.col( 0 );
+  temp_zeta = zeta.slice( 0 );
+  temp_phi = phi.slice( 0 );
+  temp_psi = psi.slice( 0 );
+  temp_xi = xi.col(0);
+  temp_beta = beta.col(0);
+  double temp_sigma2 = sigma2[ 0 ];
+  
+  arma::mat temp_loggamma( N, B );
+  temp_loggamma.zeros();
+  for( int n = 0; n < N; ++n ){
+    for( int j = 0; j < B; ++j ){
+      temp_loggamma( n, j ) = temp_alpha[ j ] + ( x.row( n )*temp_phi.row( j ).t() ).eval()( 0, 0 );
+    }
+  }
+  
+  // Looping over the number of iterations specified by user
+  for( int iter = 0; iter < iterations; ++iter ){
+    
+    // // Add/Delete
+    between_phi_zeta = help::between_phi_zeta_augment_update_BB_cpp( x, temp_zeta, temp_alpha, temp_phi, temp_loggamma, temp_cc, sigma2_phi, a, b );
+    
+    temp_zeta = as<arma::mat>( between_phi_zeta[ 0 ] );
+    temp_phi = as<arma::mat>( between_phi_zeta[ 1 ] );
+    temp_loggamma = as<arma::mat>( between_phi_zeta[ 2 ] );
+    
+    // Update within
+    phi_out = help::within_phi_augment_cpp( x, temp_zeta, temp_alpha, temp_phi, temp_loggamma, temp_cc, sigma2_phi );
+    temp_phi =  as<arma::mat>( phi_out[ 0 ] );
+    temp_loggamma = as<arma::mat>( phi_out[ 1 ] );
+    
+    // Update alphas
+    alpha_out = help::alpha_update_augment_cpp( temp_loggamma, temp_cc, temp_alpha, temp_phi, sigma_alpha );
+    temp_alpha = as<arma::vec>( alpha_out[ 0 ] );
+    temp_loggamma = as<arma::mat>( alpha_out[ 1 ] );
+    
+    // Update cc
+    temp_cc = help::cc_update_cpp( z, temp_loggamma, temp_uu );
+    
+    // Update uu
+    temp_uu = help::uu_update_cpp( z, temp_cc );
+    
+    // Update psi
+    temp_psi = help::psi_augment_cpp( temp_cc );
+    
+    //  Update between
+    between_xi_beta = help::between_step_beta(y, temp_beta, sigma_beta, temp_xi, x, temp_psi, temp_sigma2, a_m, b_m, a_0, b_0);
+    temp_beta = as<arma::vec>( between_xi_beta[ 0 ] );
+    temp_xi = as<arma::vec>( between_xi_beta[ 1 ] );
+    
+    // Update within:
+    temp_beta = help::within_beta(y,temp_beta, sigma_beta, temp_xi,x,temp_psi, a_0, b_0 );
+    
+    // Update sigma2
+    temp_sigma2 = help::update_sigma2( y, x, temp_psi, sigma_beta, temp_xi, a_0, b_0)[ 0 ];
+    
+    // Set the starting values for the next iteration
+    if( (iter + 1) % thin == 0 ){
+      alpha.col( (iter + 1)/thin - 1 ) = temp_alpha;
+      zeta.slice( (iter + 1)/thin - 1 ) = temp_zeta;
+      phi.slice( (iter + 1)/thin - 1 ) = temp_phi;
+      psi.slice( (iter + 1)/thin - 1 ) = temp_psi;
+      xi.col( (iter + 1)/thin - 1 ) = temp_xi;
+      beta.col( (iter + 1)/thin - 1 ) = temp_beta;
+      sigma2[ (iter + 1)/thin - 1 ] = temp_sigma2;
+    }
+    
+    // Print out progress
+    double printer = iter % 250;
+    
+    if( printer == 0 ){
+      Rcpp::Rcout << "Iteration = " << iter << std::endl;
+    }
+  }
+  
+  // Return output
+  List output( 7 );
+  output[ 0 ] = alpha;
+  output[ 1 ] = zeta;
+  output[ 2 ] = phi;
+  output[ 3 ] = psi;
+  output[ 4 ] = xi;
+  output[ 5 ] = beta;
+  output[ 6 ] = sigma2;
+  
+  return output ;
+}
