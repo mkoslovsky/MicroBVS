@@ -1,0 +1,175 @@
+---
+title: "BVSMed-vignette"
+output: rmarkdown::pdf_document
+vignette: >
+  %\VignetteIndexEntry{Med-vignette}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+csl: biomed-central.csl
+references:
+- id: Fu2021
+  title: 'A Bayesian Joint Model for Mediation Effect Selection in Compositional Microbiome Data'
+  author:
+  - family: Fu
+    given: Jingyan  
+  - family: Koslovsky
+    given: Matthew D
+  - family: Neophytou
+    given: Andreas M.
+  - family: Vannucci
+    given: Marina 
+  container-title: 
+  type: article-journal
+  issued:
+    year: '2023' 
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+ 
+### Jingyan Fu, Matthew Koslovsky, Andreas Neophytou, and Marina Vannucci  
+
+## Introduction  
+
+In this vignette, we provide worked examples on simulated data to demonstrate how to apply the proposed Bayesian joint model to identify overall and relative mediation effects in compositional data in @Fu2021. Having installed and loaded the MicroBVS package into the R environment (See README for instructions), generate a simulated data set for the joint model using the `Simulate_MedDM()` function.  
+
+```{r, message = F}
+library( MicroBVS )
+
+# Set the number of taxa J in the data set 
+  n_taxa <- 20
+  
+# Without covariate
+ data_DM <- Simulate_MedDM( n_obs = 100, n_taxa = n_taxa, seed = 123) 
+
+# With one binary covariate
+ data_DM2 <-  Simulate_MedDM( n_obs = 100, n_taxa = n_taxa, bin_cov = 1, seed = 123) 
+``` 
+
+Here, the taxa proportions are assumed to follow a Dirichlet distribution, the multivariate counts are simulated from a multinomial distribution, and the continuous outcome is generated using the log of the active mediators' taxa proportions. In general, our model is flexible to other compositional data structures, as demonstrated in the main manuscript.
+
+By default, 200 subjects (`n_obs = 200`) with 50 taxa (`n_taxa = 50`) and a binary treatment without additional covariates are simulated. To generate additional covariates, the user can specify the number of binary and continuous covariates in both levels of the model using the `bin_cov` and `con_cov` arguments, respectively. The range of the covariates' corresponding regression coefficients in both levels of the model is set to $[-2,2]$ by default (i.e., `covar_min = -2` and `covar_max = 2` ). In the Dirichlet portion of the model, the intercept terms for each taxa, $\alpha_j$, are uniformly sampled from Unif(-1,1) (i.e., `alpha_intercept_min = -1` and `alpha_intercept_max = 1`) by default. The treatment effects for each taxa, $\phi_j$, are uniformly sampled from Unif(1.5,3) (i.e., `phi_min = 1.5` and `phi_max = 3`) for the vector of active mediators (`active = c(1,2,3)`) by default. The corresponding log taxa proportion for the active mediators' regression coefficients, $\beta_j$, must sum to zero and are defaulted to `beta_coeff = c(1.3, -0.7, -0.6)`. The intercept and direct treatment effect in the linear portion of the model `c0 = 0` and `trt_coeff = 1`, respectively. 
+
+The output of the `Simulate_MedDM()` function contains a list with the continuous outcome, compositional counts and proportions, active mediator indicies, treatment assignments, auxillary covariates (if generated), true parameters in the Dirichlet-multinomial and linear models, as well as the seed used to generate the data. 
+
+## MCMC Algorithm
+
+To implement the Metropolis-Hastings within Gibbs MCMC algorithm for the proposed mediation model, call the `MCMC_Med()` function, which requires the treatment assignment (`trt`), continuous outcome (`Y`), taxa counts (`Z`), as well as the column index in `Z` which corresponds to the taxon to investigate as a potential mediator (`taxa`). In this example, we investigate the relative mediation/indirect effect of the first taxon in `Z` (i.e., `taxa = 1`).
+```{r, eval = T, include = T, message = F, results = 'hide'}
+model1 <- MCMC_Med( trt = data_DM$trt, Y = data_DM$Y, Z = data_DM$Z, taxa = 1, seed =1234 )
+model2 <- MCMC_Med( trt = data_DM2$trt, Y = data_DM2$Y, Z = data_DM2$Z, 
+                    covariate = data_DM2$covariate, taxa = 1, seed = 1234 )
+```
+
+By default, the algorithm is run for 5000 iterations, thinning to every $10^{th}$ iteration, with the first 500 as burn-in, and the hyperparameters for the Beta-Binomial prior are non-informative with $a = 1$ and $b = 1$. Other hyperparameters for the inverse-Gamma distribution are also set as non-informative ($h_\alpha, h_\beta, a_0, b_0, a_m, b_m = 1$), and the variance for the slabs are set to 10. The `model1` object contains a list of the MCMC samples for the taxon-specific intercept terms, $\alpha_j$, taxa proportions, $\psi_j$, regression coefficients in Dirichlet model, $\phi_{jp}$, their corresponding inclusion indicators, $\zeta_{jp}$, regression coefficients in the linear model, $\beta$, their corresponding inclusion indicators, $\xi$, as well as the assumed hyperparameters.
+
+## Inference 
+
+
+The presence of a relative mediation effect is determined with the marginal posterior probability of inclusion (MPPI) for each pair of taxa-specific inclusion indicators in the function `Selection_Med1()` and `Selection_Med3()`, which is used for Strategy 1 and the first part of Strategy 3 in the main manuscript. By default, the MPPI threshold for significant terms is set to 0.5 (`threshold = c(0.5,0.5)`), and we calculate the 95% credible intervals (`quantile = c(0.025, 0.975)`) for the relative mediation effect corresponding to the $j^{th}$ taxa specified in `MCMC_Med()` and the overall mediation effect. The function `Selection_Med2()` is used to perform Strategy 2 and the second part of Strategy 3 in the main manuscript. This function reports the relative mediation effect for all the taxa in the mediator matrix and the overall effect. We first demonstrate how to perform selection for an individual taxon and then provide code to search through all potential relative medatiors using Strategy 1.
+
+
+```{r, eval = TRUE, include = TRUE}
+result <- Selection_Med1( model = model1 )
+```
+
+
+To test the relative mediation effect for each taxon using Strategy 1, simply iterate through each taxon using a for-loop as follows: 
+```{r, eval = TRUE, include = TRUE, results = 'hide', message = F}
+# Loop over each taxon to identify relative mediation effects. Note, this will
+# run the MCMC_Med function J times.
+  selected_marginal_mediators <- matrix( ncol = 4, nrow = n_taxa)
+  for( i in 1:n_taxa ){
+      model_temp <- MCMC_Med( trt = data_DM$trt, Z = data_DM$Z, 
+                              covariate = data_DM$covariate, Y = data_DM$Y, 
+                              seed = 123, taxa = i )
+  result <- Selection_Med1( model = model_temp )
+  selected_marginal_mediators[ i, 1 ] <- result$selected
+  selected_marginal_mediators[ i, 2 ] <- result$marginal_mean
+  selected_marginal_mediators[ i, 3:4 ] <-  result$marginal_quantile
+  } 
+  colnames( selected_marginal_mediators ) <- c( "Selected", "Posterior Mean", "LB", "UB" )
+``` 
+
+Here, we find that the model was able to correctly identify the 3rd, 4th, and 5th taxon as relative mediators. 
+```{r echo = FALSE, results = 'asis' }
+library(knitr)
+kable( selected_marginal_mediators, align = 'c')
+```
+
+The overall mediation effect in this example is estimated as:  
+```{r,echo=FALSE}
+kable(cat(result$global_mean,"(",result$global_quantile[1],",",result$global_quantile[2],")"))
+```
+
+Users can perform variable selection for covariates in both the Dirichlet-multinomial and the outcome regression model by specifying `covar_select = TRUE` and notating which covariates they want to perform selection on. Here, we find that the model was able to recover both covariates in the DM and LM portion of the model, respectively.
+
+```{r,eval=T}
+covariate_info <- Selection_Med1( model = model2, covar_select = TRUE )
+covariate_info$covar_result
+```
+
+To test the relative mediation effect for all taxa and calculate the overall mediation effect with Strategy 2, use the following: 
+```{r,eval=T}
+  selected_marginal_mediators2 <- matrix( ncol = 4, nrow = n_taxa )
+  result2 <- Selection_Med2( model = model1 )
+  selected_marginal_mediators2[,1] = result2$selected
+  selected_marginal_mediators2[,2] = result2$marginal_mean
+  selected_marginal_mediators2[,3] = result2$marginal_lowerquantile
+  selected_marginal_mediators2[,4] = result2$marginal_upperquantile
+  colnames( selected_marginal_mediators2 ) <- c( "Selected", "Posterior Mean", "LB", "UB" )
+```
+
+Here, we find that the 2nd strategy was able to correctly identify the 3rd taxon as a mediator, but failed to identify the 4th and 5th. Additionally, it incorrectly identified the 1st and 2nd taxa as active mediators. 
+```{r, echo = FALSE, results = 'asis' }
+kable( selected_marginal_mediators2, align = 'c')
+```
+
+Next, we demonstrate how to implement Strategy 3. Note that if the model identifies more than one relative mediator, the input mediator matrix is truncated to the active terms, and Strategy 2 is re-run to obtain the relative indirect effects.
+```{r, eval = T }
+  result3 <- Selection_Med3( model = model1 )
+  result3$message 
+```
+```{r, eval = T, results = 'hide', fig.keep = 'all'}
+### If no mediator found, then we explore the direct effect 
+  if( result3$message == "No mediator found" ){
+  cat("No mediator identified, and the direct effect is", result3$direct_mean, "(", 
+  result3$direct_quantile,")")
+  }
+
+### If 1 mediator is identified, then we automatically have its relative mediation effect 
+  taxa_order <- 1:n_taxa
+  if(result3$message == "1 mediator found"){
+  selected_marginal_mediators3 <- c(taxa_order[result3$selected],result3$marginal_mean, result3$marginal_quantile)
+  cat("Only mediator ",selected_marginal_mediators3, "identified", "and the direct effect is", result3$direct_mean, "(", 
+  result3$direct_quantile,")")
+  }
+
+### If more than 1 mediator is identified, we truncate the mediator matrix and re-run Strategy 2 to estimate the relative indirect effects 
+  if( result3$message == "more than 1 mediators founded, process the input data" ){
+  selected_taxa = result3$selected
+  taxa_numbers = taxa_order[result3$selected]
+  cat("The potential mediators to process are:",taxa_numbers)
+  model_temp <- MCMC_Med( trt = data_DM$trt, Z = data_DM$Z[,selected_taxa], covariate = data_DM$Covariate, Y = data_DM$Y, seed = 1234, taxa=4)
+  selected_marginal_mediators3 <- matrix(ncol = 5, nrow = sum(selected_taxa))
+  result3 <- Selection_Med2( model = model_temp)
+  selected_marginal_mediators3[,1] = c(taxa_numbers[4],taxa_numbers[-4])
+  selected_marginal_mediators3[,2] = result3$selected
+  selected_marginal_mediators3[,3] = result3$marginal_mean
+  selected_marginal_mediators3[,4] = result3$marginal_lowerquantile
+  selected_marginal_mediators3[,5] = result3$marginal_upperquantile
+  colnames( selected_marginal_mediators3 ) <- c("Taxa", "Selected", "Posterior Mean", "LB", "UB" )
+  }
+```
+
+```{r}
+  kable( selected_marginal_mediators3, align = 'c') 
+```
+
+We can see that the 3rd strategy correctly identifies the 3rd and 5th taxa, but missed the 4th and incorrectly selected the 8th taxon.
