@@ -1,4 +1,4 @@
-// Code for A joint model for predicting phenotypic responses with human microbiome data
+// Code for A joint model for predicting phenotypic responses with human microbiome data and other microbiome methods
 // Author: Matt Koslovsky
 
 // Performs Bayesian variable selection for multivariate count data to predict
