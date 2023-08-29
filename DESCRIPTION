@@ -14,3 +14,4 @@ VignetteBuilder: knitr
 Suggests: knitr, rmarkdown, RefManageR
 Depends: 
     R (>= 2.10)
+LazyData: true

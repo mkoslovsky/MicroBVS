@@ -20,3 +20,10 @@ library(devtools)
 install_github( "mkoslovsky/MicroBVS", build_vignettes = TRUE)
 
 in the R console. 
+
+This version of the package corrects the update of the auxiliary parameters c_ij in the original version. Specifically, the previous Gibbs update has been replaced with a MH update. Following this change, the selection, fit, and prediction performance of the model is largely unaffected. However, the computation time does increase with the new sampler. To speed up the sampler, we also implemented a `full` version that updates the regression coefficients and variance term in the linear portion of model. Computationally, this step actually speeds up the sampler as the likelihood component in the revised MH update is greatly simplified. Additionally, we provide functionality to only update a proportion of c_ij in each iteration with a 'rate' parameter, which ranges from 0 to 1, following Cassese et al 2014. In simulation, we found that setting rate to 0.50 or above typically gave comparable results. Please reach out to the corresponding author for more details. 
+
+References: 
+Cassese, A., Guindani, M., Tadesse, M. G., Falciani, F. and Vannucci, M. (2014). A
+hierarchical Bayesian model for inference of copy number variants and their association
+to gene expression. The Annals of Applied Statistics 8 148.

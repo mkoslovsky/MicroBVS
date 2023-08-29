@@ -1,6 +1,6 @@
-MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NULL, covariate = NULL, sigma_alpha = sqrt( 10 ), 
+MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NULL, covariate = NULL, sigma2_alpha = sqrt( 10 ), 
                       sigma_beta = sqrt( 10 ), sigma_phi = sqrt( 10 ), h_alpha = 1, h_beta = 1, a = 1, b = 1,
-                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL ){
+                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL, rate = 1 ){
   library(mvtnorm)
   library(MCMCpack)
   library(Rcpp)
@@ -74,14 +74,14 @@ MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NU
   a_m <- a
   b_m <- b
   
-  output <- dm_lm_mediation( iterations, thin, alpha, Y, Z_temp, x, phi, psi, temp_cc, temp_uu, sigma2, sigma_alpha,
-                             sigma_beta, zeta, xi, beta2, sigma_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m)
-  
+  output <- dm_lm_med( iterations, thin, alpha, Y, Z_temp, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha,
+                             zeta, xi, beta2, sigma_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate )
+    
   # Return the MCMC output and other inputs for reference
   
   return(list( alpha = output[[1]], zeta = output[[2]], phi = output[[3]], 
                psi = output[[4]], xi = output[[5]], beta = output[[6]], sigma2 = output[[7]], 
-               sigma_alpha = sigma_alpha, sigma_beta = sigma_beta, a = a, b = b, a_m = a_m,
+               sigma2_alpha = sigma2_alpha, a = a, b = b, a_m = a_m,
                b_m = b_m, h_alpha = h_alpha, h_beta = h_beta, a_0 = a_0, b_0 = b_0, Y = Y, Z = Z_temp, covariates = x,iterations = iterations, thin = thin ) )
   
 }

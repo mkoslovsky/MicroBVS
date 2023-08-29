@@ -60,7 +60,7 @@ The output of the `Simulate_MedDM()` function contains a list with the continuou
 
 ## MCMC Algorithm
 
-To implement the Metropolis-Hastings within Gibbs MCMC algorithm for the proposed mediation model, call the `MCMC_Med()` function, which requires the treatment assignment (`trt`), continuous outcome (`Y`), taxa counts (`Z`), as well as the column index in `Z` which corresponds to the taxon to investigate as a potential mediator (`taxa`). In this example, we investigate the relative mediation/indirect effect of the first taxon in `Z` (i.e., `taxa = 1`).
+To implement the Metropolis-Hastings within Gibbs MCMC algorithm for the proposed mediation model, call the `MCMC_Med()` function, which requires the treatment assignment (`trt`), continuous outcome (`Y`), taxa counts (`Z`), as well as the column index in `Z` which corresponds to the taxon to investigate as a potential mediator (`taxa`). In this example, we investigate the relative mediation/indirect effect of the first taxon in `Z` (i.e., `taxa = 1`). For large sample sizes, adjust the `rate` (default 1) parameter which controls the proportion of individuals updated with sampling the auxiliary parameter `k`.
 ```{r, eval = T, include = T, message = F, results = 'hide'}
 model1 <- MCMC_Med( trt = data_DM$trt, Y = data_DM$Y, Z = data_DM$Z, taxa = 1, seed =1234 )
 model2 <- MCMC_Med( trt = data_DM2$trt, Y = data_DM2$Y, Z = data_DM2$Z, 
@@ -85,19 +85,19 @@ To test the relative mediation effect for each taxon using Strategy 1, simply it
 # Loop over each taxon to identify relative mediation effects. Note, this will
 # run the MCMC_Med function J times.
   selected_marginal_mediators <- matrix( ncol = 4, nrow = n_taxa)
-  for( i in 1:n_taxa ){
+  for( i in 1:n_taxa ){ 
       model_temp <- MCMC_Med( trt = data_DM$trt, Z = data_DM$Z, 
                               covariate = data_DM$covariate, Y = data_DM$Y, 
                               seed = 123, taxa = i )
-  result <- Selection_Med1( model = model_temp )
-  selected_marginal_mediators[ i, 1 ] <- result$selected
-  selected_marginal_mediators[ i, 2 ] <- result$marginal_mean
-  selected_marginal_mediators[ i, 3:4 ] <-  result$marginal_quantile
+      result <- Selection_Med1( model = model_temp )
+      selected_marginal_mediators[ i, 1 ] <- result$selected
+      selected_marginal_mediators[ i, 2 ] <- result$marginal_mean
+      selected_marginal_mediators[ i, 3:4 ] <-  result$marginal_quantile
   } 
   colnames( selected_marginal_mediators ) <- c( "Selected", "Posterior Mean", "LB", "UB" )
 ``` 
 
-Here, we find that the model was able to correctly identify the 3rd, 4th, and 5th taxon as relative mediators. 
+Here, we find that the model was able to correctly identify the 3rd and 4th taxon as relative mediators but not the 5th. 
 ```{r echo = FALSE, results = 'asis' }
 library(knitr)
 kable( selected_marginal_mediators, align = 'c')
@@ -126,7 +126,8 @@ To test the relative mediation effect for all taxa and calculate the overall med
   colnames( selected_marginal_mediators2 ) <- c( "Selected", "Posterior Mean", "LB", "UB" )
 ```
 
-Here, we find that the 2nd strategy was able to correctly identify the 3rd taxon as a mediator, but failed to identify the 4th and 5th. Additionally, it incorrectly identified the 1st and 2nd taxa as active mediators. 
+Here, we find that the 2nd strategy was able to correctly identify the 3rd taxon as a mediator, but failed to identify the 4th and 5th.  
+
 ```{r, echo = FALSE, results = 'asis' }
 kable( selected_marginal_mediators2, align = 'c')
 ```
@@ -156,10 +157,10 @@ Next, we demonstrate how to implement Strategy 3. Note that if the model identif
   selected_taxa = result3$selected
   taxa_numbers = taxa_order[result3$selected]
   cat("The potential mediators to process are:",taxa_numbers)
-  model_temp <- MCMC_Med( trt = data_DM$trt, Z = data_DM$Z[,selected_taxa], covariate = data_DM$Covariate, Y = data_DM$Y, seed = 1234, taxa=4)
+  model_temp <- MCMC_Med( trt = data_DM$trt, Z = data_DM$Z[,selected_taxa], covariate = data_DM$Covariate, Y = data_DM$Y, seed = 1234, taxa=3)
   selected_marginal_mediators3 <- matrix(ncol = 5, nrow = sum(selected_taxa))
   result3 <- Selection_Med2( model = model_temp)
-  selected_marginal_mediators3[,1] = c(taxa_numbers[4],taxa_numbers[-4])
+  selected_marginal_mediators3[,1] = c(taxa_numbers[3],taxa_numbers[-3])
   selected_marginal_mediators3[,2] = result3$selected
   selected_marginal_mediators3[,3] = result3$marginal_mean
   selected_marginal_mediators3[,4] = result3$marginal_lowerquantile
@@ -172,4 +173,4 @@ Next, we demonstrate how to implement Strategy 3. Note that if the model identif
   kable( selected_marginal_mediators3, align = 'c') 
 ```
 
-We can see that the 3rd strategy correctly identifies the 3rd and 5th taxa, but missed the 4th and incorrectly selected the 8th taxon.
+We can see that the 3rd strategy correctly identifies the 3rd, 4th, and 5th taxon.
