@@ -3452,7 +3452,8 @@ List dm_lm_med (
     double h_beta, 
     double a_m,
     double b_m,
-    double rate // Controls the % of individuals updated in cc
+    double rate, // Controls the % of individuals updated in cc
+    bool feedback
 ){
   
   // Initiate memory
@@ -3507,7 +3508,13 @@ List dm_lm_med (
     temp_loggamma = as<arma::mat>( alpha_out[ 1 ] );
     
     // Update cc
+    if( feedback ){
     temp_cc = help::cc_update_MH_ind_local_sub_cpp_Med( z, temp_loggamma, temp_uu, temp_cc, a_0, b_0, h_alpha, h_beta, temp_xi, y, rate, x, temp_sigma2, temp_beta );
+    }
+
+    if( ! feedback ){
+      temp_cc = help::cc_update_cpp( z, temp_loggamma, temp_uu );
+    }
     
     // Update uu
     temp_uu = help::uu_update_cpp( z, temp_cc );
