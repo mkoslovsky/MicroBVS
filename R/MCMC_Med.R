@@ -1,6 +1,6 @@
 MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NULL, covariate = NULL, sigma2_alpha = sqrt( 10 ), 
                       sigma_beta = sqrt( 10 ), sigma_phi = sqrt( 10 ), h_alpha = 1, h_beta = 1, a = 1, b = 1,
-                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL, rate = 1, feedback = TRUE ){
+                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL, rate = 1, feedback = 1 ){
   library(mvtnorm)
   library(MCMCpack)
   library(Rcpp)
