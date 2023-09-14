@@ -1,6 +1,6 @@
 MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NULL, covariate = NULL, sigma2_alpha = sqrt( 10 ), 
                       sigma_beta = sqrt( 10 ), sigma_phi = sqrt( 10 ), h_alpha = 1, h_beta = 1, a = 1, b = 1,
-                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL, rate = 1 ){
+                         a_0 = 1, b_0 = 1,  seed = 1, taxa = NULL, rate = 1, feedback = TRUE ){
   library(mvtnorm)
   library(MCMCpack)
   library(Rcpp)
@@ -75,7 +75,7 @@ MCMC_Med <- function( iterations = 5000, thin = 10, trt = NULL, Y = NULL, Z = NU
   b_m <- b
   
   output <- dm_lm_med( iterations, thin, alpha, Y, Z_temp, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha,
-                             zeta, xi, beta2, sigma_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate )
+                             zeta, xi, beta2, sigma_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate, feedback )
     
   # Return the MCMC output and other inputs for reference
   
