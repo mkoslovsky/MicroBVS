@@ -37,7 +37,7 @@ log_zeta_pj_cpp <- function(t_pj, a, b) {
     .Call(`_MicroBVS_log_zeta_pj_cpp`, t_pj, a, b)
 }
 
-dm_lm_med <- function(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate) {
-    .Call(`_MicroBVS_dm_lm_med`, iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate)
+dm_lm_med <- function(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate, feedback) {
+    .Call(`_MicroBVS_dm_lm_med`, iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate, feedback)
 }
 

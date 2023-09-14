@@ -262,8 +262,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // dm_lm_med
-List dm_lm_med(int iterations, int thin, arma::mat alpha, arma::vec y, arma::mat z, arma::mat x, arma::cube phi, arma::cube psi, arma::mat temp_cc, arma::vec temp_uu, arma::vec sigma2, double sigma2_alpha, arma::cube zeta, arma::mat xi, arma::mat beta, double sigma2_phi, double a, double b, double a_0, double b_0, double h_alpha, double h_beta, double a_m, double b_m, double rate);
-RcppExport SEXP _MicroBVS_dm_lm_med(SEXP iterationsSEXP, SEXP thinSEXP, SEXP alphaSEXP, SEXP ySEXP, SEXP zSEXP, SEXP xSEXP, SEXP phiSEXP, SEXP psiSEXP, SEXP temp_ccSEXP, SEXP temp_uuSEXP, SEXP sigma2SEXP, SEXP sigma2_alphaSEXP, SEXP zetaSEXP, SEXP xiSEXP, SEXP betaSEXP, SEXP sigma2_phiSEXP, SEXP aSEXP, SEXP bSEXP, SEXP a_0SEXP, SEXP b_0SEXP, SEXP h_alphaSEXP, SEXP h_betaSEXP, SEXP a_mSEXP, SEXP b_mSEXP, SEXP rateSEXP) {
+List dm_lm_med(int iterations, int thin, arma::mat alpha, arma::vec y, arma::mat z, arma::mat x, arma::cube phi, arma::cube psi, arma::mat temp_cc, arma::vec temp_uu, arma::vec sigma2, double sigma2_alpha, arma::cube zeta, arma::mat xi, arma::mat beta, double sigma2_phi, double a, double b, double a_0, double b_0, double h_alpha, double h_beta, double a_m, double b_m, double rate, bool feedback);
+RcppExport SEXP _MicroBVS_dm_lm_med(SEXP iterationsSEXP, SEXP thinSEXP, SEXP alphaSEXP, SEXP ySEXP, SEXP zSEXP, SEXP xSEXP, SEXP phiSEXP, SEXP psiSEXP, SEXP temp_ccSEXP, SEXP temp_uuSEXP, SEXP sigma2SEXP, SEXP sigma2_alphaSEXP, SEXP zetaSEXP, SEXP xiSEXP, SEXP betaSEXP, SEXP sigma2_phiSEXP, SEXP aSEXP, SEXP bSEXP, SEXP a_0SEXP, SEXP b_0SEXP, SEXP h_alphaSEXP, SEXP h_betaSEXP, SEXP a_mSEXP, SEXP b_mSEXP, SEXP rateSEXP, SEXP feedbackSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -292,7 +292,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type a_m(a_mSEXP);
     Rcpp::traits::input_parameter< double >::type b_m(b_mSEXP);
     Rcpp::traits::input_parameter< double >::type rate(rateSEXP);
-    rcpp_result_gen = Rcpp::wrap(dm_lm_med(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate));
+    Rcpp::traits::input_parameter< bool >::type feedback(feedbackSEXP);
+    rcpp_result_gen = Rcpp::wrap(dm_lm_med(iterations, thin, alpha, y, z, x, phi, psi, temp_cc, temp_uu, sigma2, sigma2_alpha, zeta, xi, beta, sigma2_phi, a, b, a_0, b_0, h_alpha, h_beta, a_m, b_m, rate, feedback));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -307,7 +308,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MicroBVS_log_post", (DL_FUNC) &_MicroBVS_log_post, 19},
     {"_MicroBVS_loo_prep", (DL_FUNC) &_MicroBVS_loo_prep, 7},
     {"_MicroBVS_log_zeta_pj_cpp", (DL_FUNC) &_MicroBVS_log_zeta_pj_cpp, 3},
-    {"_MicroBVS_dm_lm_med", (DL_FUNC) &_MicroBVS_dm_lm_med, 25},
+    {"_MicroBVS_dm_lm_med", (DL_FUNC) &_MicroBVS_dm_lm_med, 26},
     {NULL, NULL, 0}
 };
 
