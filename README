@@ -31,6 +31,7 @@ As of 9/6/23, this version of the joint model corrects the update of the auxilia
 Lastly, you will also find code for
 
 "A Bayesian joint model for compositional mediation effect selection in microbiome data" by J Fu, MD Koslovsky, AM Neophytou, M Vannucci published in Statistics in Medicine.
+This function provides options to cut the feedback from the outcome model to the DM portion of the model as presented in the original manuscript, or incorporate potential feedback, similar to the joint model above.
 
 Please see the accommpanying vignettes for details of how to run each model and perform inference. 
 
