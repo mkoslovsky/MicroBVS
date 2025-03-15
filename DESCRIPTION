@@ -1,6 +1,6 @@
 Package: MicroBVS
 Type: Package
-Title: MircoBVS: Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data 
+Title: MicroBVS: Dirichlet-Multinomial Regression Models with Bayesian Variable Selection for Microbiome Data 
 Version: 1.0
 Date: 2020-05-07
 Author: Matt Koslovsky and Marina Vannucci 
